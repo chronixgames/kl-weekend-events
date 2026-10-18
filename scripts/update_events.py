@@ -79,7 +79,7 @@ def kakao_send():
     message = {"object_type":"text","text":"이번 주말 KL·셀랑고르 행사 안내가 업데이트되었습니다. 행사 상세 정보와 출처 링크를 아래 페이지에서 확인해 주세요.","link":{"web_url":BASE,"mobile_web_url":BASE},"button_title":"행사 상세 보기"}
     def send(token):
         payload = urllib.parse.urlencode({"template_object":json.dumps(message,ensure_ascii=False)}).encode()
-        req = urllib.request.Request("https://kapi.kakao.com/v2/api/talk/memo/send",data=payload,headers={"Authorization":"Bearer "+token,"Content-Type":"application/x-www-form-urlencoded;charset=utf-8"})
+        req = urllib.request.Request("https://kapi.kakao.com/v2/api/talk/memo/default/send",data=payload,headers={"Authorization":"Bearer "+token,"Content-Type":"application/x-www-form-urlencoded;charset=utf-8"})
         try:
             with urllib.request.urlopen(req,timeout=25) as r: return r.read().decode()
         except urllib.error.HTTPError as e:
