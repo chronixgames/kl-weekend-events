@@ -206,7 +206,7 @@ def kakao_send():
     access = os.environ.get("KAKAO_ACCESS_TOKEN","")
     refresh = os.environ.get("KAKAO_REFRESH_TOKEN","")
     secret = os.environ.get("KAKAO_CLIENT_SECRET","")
-    message = {"object_type":"text","text":"이번 주말 KL·셀랑고르 행사 안내가 업데이트되었습니다. 날짜·장소·가격과 상세 출처를 아래 페이지에서 확인해 주세요.","link":{"web_url":BASE,"mobile_web_url":BASE},"button_title":"행사 상세 보기"}
+    message = {"object_type":"text","text":"이번 주말 KL·셀랑고르 행사 안내가 업데이트되었습니다. 날짜·장소·가격과 상세 출처를 확인해 주세요.\n\n상세 페이지 주소: "+BASE,"link":{"web_url":BASE,"mobile_web_url":BASE},"button_title":"행사 상세 보기"}
     def send(token):
         payload = urllib.parse.urlencode({"template_object":json.dumps(message,ensure_ascii=False)}).encode()
         req = urllib.request.Request("https://kapi.kakao.com/v2/api/talk/memo/default/send",data=payload,headers={"Authorization":"Bearer "+token,"Content-Type":"application/x-www-form-urlencoded;charset=utf-8"})
