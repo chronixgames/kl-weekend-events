@@ -26,8 +26,12 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # Sync remote commits before staging the generated page to avoid non-fast-forward pushes.
-          git fetch origin main
-          git rebase origin/main
           git add docs/index.html
-          git diff --cached --quiet || (git commit -m "Update weekend events page" && git push)
+          if git diff --cached --quiet; then
+            echo "No page changes to commit."
+          else
+            git commit -m "Update weekend events page"
+            git fetch origin main
+            git rebase origin/main
+            git push origin main
+          fi
