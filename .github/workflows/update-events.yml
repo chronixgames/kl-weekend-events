@@ -1,6 +1,8 @@
 name: Update KL Weekend Events
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "0 1 * * 1,4"
 permissions:
   contents: write
 jobs:
