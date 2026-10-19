@@ -162,7 +162,24 @@ def holiday_card(item):
     return f'<article class="event"><span class="pill">공휴일</span><h3>{name}</h3><p class="meta">{date} · {en}</p></article>'
 
 def build_page(events, hols):
-    this_weekend = [x for x in events if re.search(r"\b(23|24|25|30|31)\s+October,?\s+2026\b", x["date"], re.I)]
+    # Only replace the live detailed page when the scraper found a dated event this weekend.
+    weekend_start = TODAY + timedelta(days=(5 - TODAY.weekday()) % 7)
+    weekend_end = weekend_start + timedelta(days=1)
+    this_weekend = []
+    for item in events:
+        date_text = item.get("date", "")
+        parsed = re.findall(r"(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]+),?\s+(20\d{2})", date_text, re.I)
+        for day, month_name, year in parsed:
+            try:
+                event_day = datetime.strptime(f"{day} {month_name} {year}", "%d %B %Y").date()
+                if weekend_start <= event_day <= weekend_end:
+                    this_weekend.append(item)
+                    break
+            except ValueError:
+                continue
+    if not this_weekend:
+        print("PAGE_NOT_OVERWRITTEN: no reliably dated event found for the upcoming weekend")
+        return
     family = [x for x in events if x["category"] == "가족·키즈"]
     adult = [x for x in events if x["category"] != "가족·키즈"]
     stamp = NOW.strftime("%Y-%m-%d %H:%M MYT")
