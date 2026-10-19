@@ -206,7 +206,7 @@ def kakao_send():
     access = os.environ.get("KAKAO_ACCESS_TOKEN","")
     refresh = os.environ.get("KAKAO_REFRESH_TOKEN","")
     secret = os.environ.get("KAKAO_CLIENT_SECRET","")
-    message = {"object_type":"text","text":"이번 주말 KL·셀랑고르 행사 안내가 업데이트되었습니다. 날짜·장소·가격과 상세 출처를 확인해 주세요.\n\n상세 페이지 주소: "+BASE,"link":{"web_url":BASE,"mobile_web_url":BASE},"button_title":"행사 상세 보기"}
+    message = {"object_type":"text","text":"🇲🇾 이번 주말 KL·셀랑고르 행사 요약\n\n📍 위치: 163 Retail Park\n🎨 이벤트: Melt Mellow — 스퀴시 마켓 & DIY 선데 슬라임 바 팝업\n🕙 진행시간: 10:00–22:00\n👧 추천 연령: 5세 이상\n✨ 아이스크림 선데 모양의 슬라임을 직접 꾸미고 만들 수 있는 촉감 체험과 귀여운 스퀴시 캐릭터 굿즈를 만나는 팝업입니다.\n\n📌 행사 날짜·참가비 및 세부 안내는 아래 링크에서 확인하세요.\n상세 페이지: "+BASE+"#melt-mellow","link":{"web_url":BASE+"#melt-mellow","mobile_web_url":BASE+"#melt-mellow"},"button_title":"행사 상세 보기"}
     def send(token):
         payload = urllib.parse.urlencode({"template_object":json.dumps(message,ensure_ascii=False)}).encode()
         req = urllib.request.Request("https://kapi.kakao.com/v2/api/talk/memo/default/send",data=payload,headers={"Authorization":"Bearer "+token,"Content-Type":"application/x-www-form-urlencoded;charset=utf-8"})
