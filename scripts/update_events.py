@@ -201,40 +201,96 @@ def build_page(events, hols):
     with open("docs/index.html","w",encoding="utf-8") as f:
         f.write(content)
 
-def kakao_send():
+def upcoming_weekend_events(events):
+    weekend_start = TODAY + timedelta(days=(5 - TODAY.weekday()) % 7)
+    weekend_end = weekend_start + timedelta(days=1)
+    selected, seen = [], set()
+    for item in events:
+        date_text = item.get("date", "")
+        parsed = re.findall(r"(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]+),?\s+(20\d{2})", date_text, re.I)
+        for day, month_name, year in parsed:
+            try:
+                event_day = datetime.strptime(f"{day} {month_name} {year}", "%d %B %Y").date()
+                if weekend_start <= event_day <= weekend_end:
+                    key = (item.get("title", "").lower(), date_text.lower())
+                    if key not in seen:
+                        seen.add(key)
+                        selected.append(item)
+                    break
+            except ValueError:
+                continue
+    return selected
+
+def kakao_send(events, hols):
     rest = os.environ["KAKAO_REST_API_KEY"]
-    access = os.environ.get("KAKAO_ACCESS_TOKEN","")
-    refresh = os.environ.get("KAKAO_REFRESH_TOKEN","")
-    secret = os.environ.get("KAKAO_CLIENT_SECRET","")
-    message = {"object_type":"text","text":"🇲🇾 이번 주말 KL·셀랑고르 행사 요약\n\n📍 위치: 163 Retail Park\n🎨 이벤트: Melt Mellow — 스퀴시 마켓 & DIY 선데 슬라임 바 팝업\n🕙 진행시간: 10:00–22:00\n👧 추천 연령: 5세 이상\n✨ 아이스크림 선데 모양의 슬라임을 직접 꾸미고 만들 수 있는 촉감 체험과 귀여운 스퀴시 캐릭터 굿즈를 만나는 팝업입니다.\n\n📌 행사 날짜·참가비 및 세부 안내는 아래 링크에서 확인하세요.\n상세 페이지: "+BASE+"#melt-mellow","link":{"web_url":BASE+"#melt-mellow","mobile_web_url":BASE+"#melt-mellow"},"button_title":"행사 상세 보기"}
+    access = os.environ.get("KAKAO_ACCESS_TOKEN", "")
+    refresh = os.environ.get("KAKAO_REFRESH_TOKEN", "")
+    secret = os.environ.get("KAKAO_CLIENT_SECRET", "")
+    weekend = upcoming_weekend_events(events)
+    weekend_label = f"{(TODAY + timedelta(days=(5 - TODAY.weekday()) % 7)).strftime('%m/%d')}–{(TODAY + timedelta(days=(5 - TODAY.weekday()) % 7) + timedelta(days=1)).strftime('%m/%d')}"
+    lines = [f"🇲🇾 KL·셀랑고르 주말 행사 ({weekend_label})"]
+    if weekend:
+        for item in weekend[:3]:
+            title = item.get("title", "행사")
+            date = item.get("date", "날짜 원문 확인")
+            place = item.get("location", "장소 원문 확인")
+            price = item.get("price", "가격 원문 확인")
+            lines.append(f"• {title} | {date} | {place} | {price}")
+        if len(weekend) > 3:
+            lines.append(f"외 {len(weekend)-3}개 행사")
+    else:
+        lines.append("이번 주말 날짜를 신뢰성 있게 확인한 행사 정보를 찾지 못했습니다.")
+        lines.append("아래 페이지에서 행사 캘린더와 최신 안내를 확인해 주세요.")
+    if hols:
+        next_holiday = hols[0]
+        lines.append(f"🇲🇾 공휴일: {next_holiday.get('date','')} {next_holiday.get('localName') or next_holiday.get('name','')}")
+    lines.append("상세 행사 페이지: " + BASE)
+    text_body = "\n".join(lines)
+    message = {
+        "object_type": "text",
+        "text": text_body[:1900],
+        "link": {"web_url": BASE, "mobile_web_url": BASE},
+        "button_title": "주말 행사 상세 보기"
+    }
     def send(token):
-        payload = urllib.parse.urlencode({"template_object":json.dumps(message,ensure_ascii=False)}).encode()
-        req = urllib.request.Request("https://kapi.kakao.com/v2/api/talk/memo/default/send",data=payload,headers={"Authorization":"Bearer "+token,"Content-Type":"application/x-www-form-urlencoded;charset=utf-8"})
+        payload = urllib.parse.urlencode({"template_object": json.dumps(message, ensure_ascii=False)}).encode()
+        req = urllib.request.Request(
+            "https://kapi.kakao.com/v2/api/talk/memo/default/send",
+            data=payload,
+            headers={"Authorization": "Bearer " + token, "Content-Type": "application/x-www-form-urlencoded;charset=utf-8"}
+        )
         try:
-            with urllib.request.urlopen(req,timeout=25) as r: return r.read().decode()
+            with urllib.request.urlopen(req, timeout=25) as r:
+                return r.read().decode()
         except urllib.error.HTTPError as e:
-            return "HTTP_ERROR:"+str(e.code)+":"+e.read().decode()
+            return "HTTP_ERROR:" + str(e.code) + ":" + e.read().decode()
     result = send(access) if access else "NO_ACCESS_TOKEN"
     if result.startswith("HTTP_ERROR:401") and refresh:
-        form = {"grant_type":"refresh_token","client_id":rest,"refresh_token":refresh}
-        if secret: form["client_secret"] = secret
-        req = urllib.request.Request("https://kauth.kakao.com/oauth/token",data=urllib.parse.urlencode(form).encode(),headers={"Content-Type":"application/x-www-form-urlencoded;charset=utf-8"})
-        with urllib.request.urlopen(req,timeout=25) as r: token_data=json.loads(r.read().decode())
+        form = {"grant_type": "refresh_token", "client_id": rest, "refresh_token": refresh}
+        if secret:
+            form["client_secret"] = secret
+        req = urllib.request.Request(
+            "https://kauth.kakao.com/oauth/token",
+            data=urllib.parse.urlencode(form).encode(),
+            headers={"Content-Type": "application/x-www-form-urlencoded;charset=utf-8"}
+        )
+        with urllib.request.urlopen(req, timeout=25) as r:
+            token_data = json.loads(r.read().decode())
         access = token_data["access_token"]
         result = send(access)
         print("KAKAO_ACCESS_TOKEN_REFRESHED")
         if token_data.get("refresh_token"):
             print("A_REFRESH_TOKEN_WAS_ROTATED")
     if not result.startswith("{") or '"result_code":0' not in result:
-        raise RuntimeError("Kakao message send failed. Check token/secrets. Response: "+result[:400])
-    print("KAKAO_MESSAGE_SENT")
+        raise RuntimeError("Kakao message send failed. Check token/secrets. Response: " + result[:400])
+    print(f"KAKAO_MESSAGE_SENT: {len(weekend)} dated events for the upcoming weekend")
 
 def main():
     events = collect_events()
     hols = holidays()
     build_page(events, hols)
     print(f"Page updated: {len(events)} dated event leads, {len(hols)} public holidays")
-    kakao_send()
+    kakao_send(events, hols)
 
 if __name__ == "__main__":
     main()
