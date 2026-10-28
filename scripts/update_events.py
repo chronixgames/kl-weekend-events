@@ -190,7 +190,11 @@ KOREAN_MONTHS = {
 def korean_date(value):
     for en, ko in KOREAN_MONTHS.items():
         value = re.sub(rf"\b{en}\b", ko, value, flags=re.I)
-    return value
+    # Year is redundant on the event page; display Korean month/day only.
+    value = re.sub(r"\b20\d{2}\b", "", value)
+    value = re.sub(r"\s{2,}", " ", value)
+    value = re.sub(r"\s+([–—-])\s+", r" \1 ", value)
+    return value.strip(" ,·")
 
 def is_instagram_event(item):
     source = (item.get("source", "") + " " + item.get("link", "")).lower()
