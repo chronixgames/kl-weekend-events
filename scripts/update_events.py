@@ -161,30 +161,37 @@ def holiday_card(item):
     en = html.escape(item.get("name",""))
     return f'<article class="event"><span class="pill">공휴일</span><h3>{name}</h3><p class="meta">{date} · {en}</p></article>'
 
+def parsed_event_dates(item):
+    """Return only explicit calendar dates parsed from the source's event date string."""
+    date_text = item.get("date", "")
+    parsed = re.findall(r"(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]+),?\s+(20\d{2})", date_text, re.I)
+    dates = []
+    for day, month_name, year in parsed:
+        try:
+            dates.append(datetime.strptime(f"{day} {month_name} {year}", "%d %B %Y").date())
+        except ValueError:
+            continue
+    return dates
+
 def build_page(events, hols):
-    # Only replace the live detailed page when the scraper found a dated event this weekend.
+    # Always publish a fresh page, even when the scraper cannot verify this weekend's events.
     weekend_start = TODAY + timedelta(days=(5 - TODAY.weekday()) % 7)
     weekend_end = weekend_start + timedelta(days=1)
-    this_weekend = []
-    for item in events:
-        date_text = item.get("date", "")
-        parsed = re.findall(r"(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]+),?\s+(20\d{2})", date_text, re.I)
-        for day, month_name, year in parsed:
-            try:
-                event_day = datetime.strptime(f"{day} {month_name} {year}", "%d %B %Y").date()
-                if weekend_start <= event_day <= weekend_end:
-                    this_weekend.append(item)
-                    break
-            except ValueError:
-                continue
+    this_weekend = [
+        item for item in events
+        if any(weekend_start <= event_day <= weekend_end for event_day in parsed_event_dates(item))
+    ]
+    future_events = [
+        item for item in events
+        if any(event_day >= TODAY for event_day in parsed_event_dates(item))
+    ]
+    family = [x for x in future_events if x["category"] == "가족·키즈"]
+    adult = [x for x in future_events if x["category"] != "가족·키즈"]
     if not this_weekend:
-        print("PAGE_NOT_OVERWRITTEN: no reliably dated event found for the upcoming weekend")
-        return
-    family = [x for x in events if x["category"] == "가족·키즈"]
-    adult = [x for x in events if x["category"] != "가족·키즈"]
+        print("NO_VERIFIED_EVENTS_FOR_UPCOMING_WEEKEND: page will be refreshed without stale event recommendations")
     stamp = NOW.strftime("%Y-%m-%d %H:%M MYT")
     def section(title, items):
-        body = "".join(card(x) for x in items) or '<p class="muted">현재 일정과 날짜를 함께 확인할 수 있는 항목이 없습니다. 아래 행사 캘린더에서 추가 정보를 확인해 주세요.</p>'
+        body = "".join(card(x) for x in items) or '<p class="muted">현재 날짜가 확인된 행사를 찾지 못했습니다. 지난 행사 정보를 최신 행사처럼 표시하지 않습니다. 아래 공식 행사 캘린더에서 일정을 확인해 주세요.</p>'
         return f'<section><h2>{title}</h2>{body}</section>'
     content = f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>KL & Selangor Weekend Events</title><meta name="description" content="쿠알라룸푸르와 셀랑고르의 최신 주말 행사, 가족·키즈 활동, 성인 문화 행사와 공휴일을 확인하세요.">
