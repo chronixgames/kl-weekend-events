@@ -165,8 +165,25 @@ def holidays():
         out.append({"date":"2026-10-26","localName":"셀랑고르 주 공휴일 대체휴일 (술탄 즉위 25주년 기념)","name":"Selangor state public holiday (replacement day)"})
     return sorted(out, key=lambda x: x.get("date",""))
 
+EVENT_KO_TITLES = {
+    "Meet and Greet Sanrio Chararters at Sunway Pyramid": "선리오 캐릭터와 만나는 행사",
+    "Kiddie CEO Halloween Takeover": "키디 CEO 할로윈 체험 행사",
+    "Kiddie CEO Halloween Takeover at The Campus Ampang": "캠퍼스 암팡 키디 CEO 할로윈 행사",
+    "Halloween sensory-friendly fun activities at Campus Ampang": "캠퍼스 암팡 감각 친화형 할로윈 체험",
+    "Nature Guided Walk at Taman Tugu": "타만 투구 자연 가이드 산책",
+    "Forest Bathing at Taman Tugu": "타만 투구 숲속 힐링 체험",
+    "3D Printing Workshop at Hartamas Shopping Centre": "하르타마스 쇼핑센터 3D 프린팅 워크숍",
+    "Halloween Science and Maker Experience in Bangsar": "방사르 할로윈 과학·메이커 체험",
+    "Treats & Sweets All Day at The Campus Ampang": "캠퍼스 암팡 간식·디저트 행사",
+    "Boo! @ GMBB Halloween Weekend": "GMBB 할로윈 주말 행사 ‘부!’",
+    "KLove Market": "클로브 마켓",
+    "GeekCon Halloween Edition": "긱콘 할로윈 에디션",
+}
+def korean_title(title):
+    return EVENT_KO_TITLES.get(title, title)
+
 def card(item):
-    title = html.escape(item.get("title",""))
+    title = html.escape(korean_title(item.get("title","")) )
     link = html.escape(item.get("link","#"), quote=True)
     date = html.escape(item.get("date","일정 원문 확인"))
     location = html.escape(item.get("location","원문에서 장소 확인"))
@@ -258,7 +275,7 @@ def kakao_send(events, hols):
     lines = [f"🇲🇾 KL·셀랑고르 주말 행사 ({weekend_label})"]
     if weekend:
         for item in weekend[:3]:
-            title = item.get("title", "행사")
+            title = korean_title(item.get("title", "행사"))
             date = item.get("date", "날짜 원문 확인")
             place = item.get("location", "장소 원문 확인")
             price = item.get("price", "가격 원문 확인")
