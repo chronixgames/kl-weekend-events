@@ -237,12 +237,69 @@ def clean_event_date(value):
     value = re.sub(r"\s{2,}", " ", value)
     return value.strip(" ·,-")
 
+def simplify_location(location):
+    """Show only a recognizable area/venue name, not a full street address."""
+    raw = re.sub(r"[,\s]*Malaysia\b", "", location or "", flags=re.I).strip(" ,·-")
+    low = raw.lower()
+    rules = [
+        (("the campus ampang", "ampang"), "암팡"),
+        (("sunway pyramid", "bandar sunway"), "반다르 선웨이"),
+        (("gmbb", "jalan robertson"), "쿠알라룸푸르 시내(GMBB)"),
+        (("kloe hotel", "jalan bukit bintang"), "부킷 빈탕"),
+        (("mitec",), "쿠알라룸푸르(MITEC)"),
+        (("bangsar",), "방사르"),
+        (("taman tugu",), "타만 투구"),
+        (("hartamas",), "스리 하르타마스"),
+    ]
+    for keys, label in rules:
+        if any(key in low for key in keys):
+            return label
+    # Fall back to the first meaningful venue/area segment, stripping postcode/street detail.
+    parts = [p.strip() for p in raw.split(",") if p.strip()]
+    if not parts:
+        return "장소 원문 확인"
+    first = parts[0]
+    first = re.sub(r"\b\d{4,6}\b", "", first).strip()
+    return first[:70] or "장소 원문 확인"
+
+def event_intro(item):
+    text = (item.get("title", "") + " " + item.get("category", "")).lower()
+    if any(k in text for k in ("halloween", "할로윈", "sensory", "감각 친화")):
+        return "할로윈 분위기 속에서 테마 체험과 시즌 활동을 즐길 수 있는 행사입니다."
+    if any(k in text for k in ("sanrio", "캐릭터", "meet and greet")):
+        return "인기 캐릭터를 가까이에서 만나고 사진을 남기기 좋은 행사입니다."
+    if any(k in text for k in ("market", "마켓", "popup", "팝업")):
+        return "다양한 부스와 상품을 둘러보며 주말 쇼핑과 구경을 즐길 수 있는 행사입니다."
+    if any(k in text for k in ("workshop", "워크숍", "maker", "printing", "프린팅", "science", "과학")):
+        return "직접 만들고 체험하며 새로운 것을 배울 수 있는 참여형 프로그램입니다."
+    if any(k in text for k in ("walk", "산책", "forest", "숲")):
+        return "야외에서 걷고 자연을 즐기며 여유로운 시간을 보내기 좋은 활동입니다."
+    if item.get("category") == "가족·키즈":
+        return "아이와 함께 참여하거나 가족 나들이 코스로 고려하기 좋은 행사입니다."
+    if item.get("category") == "성인·문화":
+        return "전시·공연·문화 콘텐츠를 둘러보며 주말 여가를 보내기 좋은 행사입니다."
+    return "행사 세부 내용과 참여 조건은 주최 측 안내에서 확인해 주세요."
+
+def audience_recommendation(item):
+    text = (item.get("title", "") + " " + item.get("category", "")).lower()
+    if any(k in text for k in ("toddler", "baby", "유아")):
+        age = "영유아 동반 가족"
+    elif any(k in text for k in ("kids", "kid", "children", "child", "family", "halloween", "키즈", "가족", "할로윈", "sensory", "감각 친화", "pokemon", "sanrio", "캐릭터")):
+        age = "어린이·가족"
+    elif any(k in text for k in ("workshop", "워크숍", "market", "마켓", "concert", "공연", "exhibition", "전시", "art", "문화")):
+        age = "청소년·성인"
+    else:
+        age = "전 연령(세부 조건 확인)"
+    return age, "남녀 모두"
+
 def card(item, number=None):
     title = html.escape(korean_title(item.get("title","")) )
     link = html.escape(item.get("link","#"), quote=True)
     date = korean_date_html(clean_event_date(item.get("date","일정 원문 확인")) )
-    location_text = re.sub(r"[,\s]*Malaysia\b", "", item.get("location","원문에서 장소 확인"), flags=re.I).strip(" ,·-")
-    location = html.escape(location_text or "장소 원문 확인")
+    location = html.escape(simplify_location(item.get("location","원문에서 장소 확인")))
+    intro = html.escape(event_intro(item))
+    age, gender = audience_recommendation(item)
+    audience = html.escape(age + " · " + gender)
     price = html.escape(item.get("price","원문에서 확인"))
     source = html.escape(item.get("source",""))
     category = html.escape(item.get("category","행사"))
@@ -252,7 +309,7 @@ def card(item, number=None):
     google_maps = "https://www.google.com/maps/search/?api=1&query=" + maps_q
     waze = "https://waze.com/ul?q=" + maps_q + "&navigate=yes"
     nav = f'<div class="nav-links"><a href="{html.escape(google_maps, quote=True)}" target="_blank" rel="noopener">📍 Google 지도 길찾기</a><a href="{html.escape(waze, quote=True)}" target="_blank" rel="noopener">🚗 Waze 길찾기</a></div>'
-    return f'<article class="event">{number_html}<div class="top"><span class="pill">{category}</span><span class="source">{source}</span></div><h3><a href="{link}" target="_blank" rel="noopener">{title}</a></h3><p class="meta"><b>📅 일정</b> {date}</p><p class="meta"><b>📍 장소</b> {location}</p><p class="meta"><b>🎟️ 가격</b> {price}</p>{nav}<p><a class="detail" href="{link}" target="_blank" rel="noopener">공식/원문에서 상세 정보 확인 ↗</a></p></article>'
+    return f'<article class="event">{number_html}<div class="top"><span class="pill">{category}</span><span class="source">{source}</span></div><h3><a href="{link}" target="_blank" rel="noopener">{title}</a></h3><p class="summary">{intro}</p><p class="meta"><b>📅 일정</b> {date}</p><p class="meta"><b>📍 장소</b> {location}</p><p class="meta"><b>👥 추천 대상</b> {audience}</p><p class="meta"><b>🎟️ 가격</b> {price}</p>{nav}<p><a class="detail" href="{link}" target="_blank" rel="noopener">공식/원문에서 상세 정보 확인 ↗</a></p></article>'
 
 def holiday_card(item):
     name = html.escape(item.get("localName") or item.get("name") or "공휴일")
@@ -297,7 +354,7 @@ def build_page(events, hols):
     content = f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>KL & Selangor Weekend Events</title><meta name="description" content="쿠알라룸푸르와 셀랑고르의 최신 주말 행사, 가족·키즈 활동, 성인 문화 행사와 공휴일을 확인하세요.">
 <style>
-*{{box-sizing:border-box}}body{{margin:0;background:#f3f6fb;color:#172033;font-family:Arial,'Noto Sans KR',sans-serif;line-height:1.6}}header{{background:linear-gradient(135deg,#172554,#334e9b);color:#fff;padding:28px 17px}}header div,main,footer{{max-width:880px;margin:auto}}h1{{margin:0;font-size:clamp(25px,6vw,36px);line-height:1.2}}header p{{color:#dbeafe;margin:9px 0 0}}main{{padding:16px 12px 38px}}.notice{{background:#fff;border:1px solid #dfe5ef;border-radius:13px;padding:14px;margin:0 0 22px}}section{{margin:0 0 26px}}h2{{font-size:21px;margin:0 0 10px}}.event{{position:relative;background:#fff;border:1px solid #dfe5ef;border-radius:13px;padding:18px 15px 15px 58px;margin:10px 0;box-shadow:0 2px 7px #1b2b4a0b}}.number{{position:absolute;left:14px;top:16px;display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;color:#fff;font-weight:700}}.number-weekend{{background:#2563eb}}.number-family{{background:#16a34a}}.number-culture{{background:#9333ea}}.nav-links{{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}}.nav-links a{{display:inline-block;background:#edf3ff;border:1px solid #d5e1fb;border-radius:8px;padding:8px 10px;text-decoration:none;font-weight:700;font-size:13px}}h3{{font-size:17px;line-height:1.4;margin:9px 0}}.meta,.muted{{color:#536078;font-size:14px;margin:5px 0;overflow-wrap:anywhere}}a{{color:#2457b5;overflow-wrap:anywhere}}.top{{display:flex;gap:8px;align-items:center;flex-wrap:wrap}}.pill{{display:inline-block;background:#e8efff;color:#253f8c;padding:3px 9px;border-radius:18px;font-size:12px;font-weight:700}}.source{{font-size:12px;color:#6b7280}}.date-sat{{color:#2563eb;font-weight:700}}.date-sun,.date-holiday{{color:#dc2626;font-weight:700}}.holiday{{border-color:#fecaca}}.detail{{display:inline-block;margin-top:5px;font-weight:700;text-decoration:none}}footer{{padding:0 14px 30px;color:#687386;font-size:12px}}
+*{{box-sizing:border-box}}body{{margin:0;background:#f3f6fb;color:#172033;font-family:Arial,'Noto Sans KR',sans-serif;line-height:1.6}}header{{background:linear-gradient(135deg,#172554,#334e9b);color:#fff;padding:28px 17px}}header div,main,footer{{max-width:880px;margin:auto}}h1{{margin:0;font-size:clamp(25px,6vw,36px);line-height:1.2}}header p{{color:#dbeafe;margin:9px 0 0}}main{{padding:16px 12px 38px}}.notice{{background:#fff;border:1px solid #dfe5ef;border-radius:13px;padding:14px;margin:0 0 22px}}section{{margin:0 0 26px}}h2{{font-size:21px;margin:0 0 10px}}.event{{position:relative;background:#fff;border:1px solid #dfe5ef;border-radius:13px;padding:18px 15px 15px 58px;margin:10px 0;box-shadow:0 2px 7px #1b2b4a0b}}.number{{position:absolute;left:14px;top:16px;display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;color:#fff;font-weight:700}}.number-weekend{{background:#2563eb}}.number-family{{background:#16a34a}}.number-culture{{background:#9333ea}}.nav-links{{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}}.nav-links a{{display:inline-block;background:#edf3ff;border:1px solid #d5e1fb;border-radius:8px;padding:8px 10px;text-decoration:none;font-weight:700;font-size:13px}}h3{{font-size:17px;line-height:1.4;margin:9px 0}}.summary{{font-size:14px;color:#374151;background:#f8fafc;border-left:3px solid #94a3b8;padding:8px 10px;margin:8px 0}}.meta,.muted{{color:#536078;font-size:14px;margin:5px 0;overflow-wrap:anywhere}}a{{color:#2457b5;overflow-wrap:anywhere}}.top{{display:flex;gap:8px;align-items:center;flex-wrap:wrap}}.pill{{display:inline-block;background:#e8efff;color:#253f8c;padding:3px 9px;border-radius:18px;font-size:12px;font-weight:700}}.source{{font-size:12px;color:#6b7280}}.date-sat{{color:#2563eb;font-weight:700}}.date-sun,.date-holiday{{color:#dc2626;font-weight:700}}.holiday{{border-color:#fecaca}}.detail{{display:inline-block;margin-top:5px;font-weight:700;text-decoration:none}}footer{{padding:0 14px 30px;color:#687386;font-size:12px}}
 </style></head><body><header><div><h1>KL & Selangor Weekend Events</h1><p>주말에 갈 만한 행사만 모아보기 · 가족·키즈 · 성인·문화 · 공휴일</p></div></header><main>
 <div class="notice"><b>마지막 업데이트:</b> {stamp}<p class="muted">날짜·장소·가격은 원문에서 추출한 정보입니다. 일정 변경 가능성이 있으니 방문 전 상세 링크에서 주최 측 공지를 확인해 주세요. 확인되지 않은 정보는 ‘원문 확인’으로 표시합니다.</p><p><a href="https://kualalumpurwithkids.com/events/month/" target="_blank" rel="noopener">가족 행사 캘린더</a> · <a href="https://discover.calendar2u.com/" target="_blank" rel="noopener">전체 행사 캘린더</a> · <a href="https://www.warisankl.my/events" target="_blank" rel="noopener">Warisan KL 문화 행사</a> · <a href="https://www.dbkl.gov.my/en" target="_blank" rel="noopener">쿠알라룸푸르 시청 행사</a></p></div>
 {section("📌 다가오는 주말 추천 TOP", this_weekend[:12], numbered=True)}
