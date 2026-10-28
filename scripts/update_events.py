@@ -294,30 +294,21 @@ def kakao_send(events, hols):
     refresh = os.environ.get("KAKAO_REFRESH_TOKEN", "")
     secret = os.environ.get("KAKAO_CLIENT_SECRET", "")
     weekend = upcoming_weekend_events(events)
-    weekend_label = f"{(TODAY + timedelta(days=(5 - TODAY.weekday()) % 7)).strftime('%m/%d')}–{(TODAY + timedelta(days=(5 - TODAY.weekday()) % 7) + timedelta(days=1)).strftime('%m/%d')}"
-    weekend_label = f"{korean_date((TODAY + timedelta(days=(5 - TODAY.weekday()) % 7)).strftime('%d %B'))}–{korean_date((TODAY + timedelta(days=(5 - TODAY.weekday()) % 7) + timedelta(days=1)).strftime('%d %B'))}"
-    lines = [f"🇲🇾 KL·셀랑고르 주말 행사 | {weekend_label}"]
+    saturday = TODAY + timedelta(days=(5 - TODAY.weekday()) % 7)
+    sunday = saturday + timedelta(days=1)
+    weekend_label = f"{korean_date(saturday.strftime('%d %B'))}–{korean_date(sunday.strftime('%d %B'))}"
     if weekend:
-        for item in weekend[:3]:
-            title = korean_title(item.get("title", "행사"))
-            date = korean_date(item.get("date", "일정 확인"))
-            place = item.get("location", "장소 확인")
-            price = item.get("price", "가격 확인")
-            lines.append(f"• {title} · {date} · {place} · {price}")
-        if len(weekend) > 3:
-            lines.append(f"외 {len(weekend)-3}개 행사")
+        headline = "🎉 이번 주말 KL·셀랑고르 나들이 & 이벤트"
+        teaser = f"할로윈·가족 체험·팝업 등 주말 행사 {len(weekend)}개를 모았습니다."
     else:
-        lines.append("이번 주말 행사 일정은 아래 링크에서 확인해 주세요.")
-    if hols:
-        next_holiday = hols[0]
-        lines.append(f"🇲🇾 공휴일: {korean_date(next_holiday.get('date',''))} {next_holiday.get('localName') or next_holiday.get('name','')}")
-    lines.append("🔎 전체 일정·Google 지도·Waze: " + BASE)
-    text_body = "\n".join(lines)
+        headline = "🇲🇾 KL·셀랑고르 주말 행사 안내"
+        teaser = "이번 주말 가볼 만한 행사와 이벤트 일정을 확인해 보세요."
+    text_body = f"{headline}\n📅 {weekend_label}\n{teaser}\n\n👇 행사 일정·장소·가격·지도 보기\n{BASE}"
     message = {
         "object_type": "text",
         "text": text_body[:1900],
         "link": {"web_url": BASE, "mobile_web_url": BASE},
-        "button_title": "주말 행사 상세 보기"
+        "button_title": "주말 행사 보기"
     }
     def send(token):
         payload = urllib.parse.urlencode({"template_object": json.dumps(message, ensure_ascii=False)}).encode()
@@ -345,7 +336,6 @@ def kakao_send(events, hols):
             with urllib.request.urlopen(req, timeout=25) as r:
                 token_data = json.loads(r.read().decode())
         except urllib.error.HTTPError as e:
-            # Log Kakao's diagnostic response, but never log credentials or tokens.
             error_body = e.read().decode("utf-8", "replace")
             raise RuntimeError(
                 f"Kakao token refresh failed (HTTP {e.code}). "
@@ -358,7 +348,7 @@ def kakao_send(events, hols):
             print("A_REFRESH_TOKEN_WAS_ROTATED")
     if not result.startswith("{") or '"result_code":0' not in result:
         raise RuntimeError("Kakao message send failed. Check token/secrets. Response: " + result[:400])
-    print(f"KAKAO_MESSAGE_SENT: {len(weekend)} dated events for the upcoming weekend")
+    print(f"KAKAO_MESSAGE_SENT: short digest for {weekend_label}; {len(weekend)} dated events linked")
 
 def main():
     events = collect_events()
