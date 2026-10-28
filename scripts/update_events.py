@@ -292,7 +292,7 @@ def audience_recommendation(item):
         age = "전 연령(세부 조건 확인)"
     return age, "남녀 모두"
 
-def card(item, number=None):
+def card(item, number=None, number_class=None):
     title = html.escape(korean_title(item.get("title","")) )
     link = html.escape(item.get("link","#"), quote=True)
     date = korean_date_html(clean_event_date(item.get("date","일정 원문 확인")) )
@@ -303,8 +303,10 @@ def card(item, number=None):
     price = html.escape(item.get("price","원문에서 확인"))
     source = html.escape(item.get("source",""))
     category = html.escape(item.get("category","행사"))
-    number_class = "number-family" if item.get("category") == "가족·키즈" else ("number-culture" if item.get("category") == "성인·문화" else "number-weekend")
-    number_html = f'<span class="number {number_class}">{number}</span>' if number is not None else ""
+    number_class = number_class or ("number-family" if item.get("category") == "가족·키즈" else ("number-culture" if item.get("category") == "성인·문화" else "number-weekend"))
+    number_colors = {"number-weekend": "#2563eb", "number-family": "#16a34a", "number-culture": "#9333ea"}
+    number_color = number_colors.get(number_class, "#2563eb")
+    number_html = f'<span class="number {number_class}" style="background-color:{number_color};color:#ffffff !important">{number}</span>' if number is not None else ""
     maps_q = urllib.parse.quote(item.get("location", "Kuala Lumpur, Malaysia"))
     google_maps = "https://www.google.com/maps/search/?api=1&query=" + maps_q
     waze = "https://waze.com/ul?q=" + maps_q + "&navigate=yes"
@@ -348,8 +350,8 @@ def build_page(events, hols):
     if not this_weekend:
         print("NO_VERIFIED_EVENTS_FOR_UPCOMING_WEEKEND: page will be refreshed without stale event recommendations")
     stamp = NOW.strftime("%Y-%m-%d %H:%M MYT")
-    def section(title, items, numbered=False):
-        body = "".join(card(x, i + 1 if numbered else None) for i, x in enumerate(items)) or '<p class="muted">현재 날짜가 확인된 행사를 찾지 못했습니다. 지난 행사 정보를 최신 행사처럼 표시하지 않습니다. 아래 공식 행사 캘린더에서 일정을 확인해 주세요.</p>'
+    def section(title, items, numbered=False, number_class="number-weekend"):
+        body = "".join(card(x, i + 1 if numbered else None, number_class if numbered else None) for i, x in enumerate(items)) or '<p class="muted">현재 날짜가 확인된 행사를 찾지 못했습니다. 지난 행사 정보를 최신 행사처럼 표시하지 않습니다. 아래 공식 행사 캘린더에서 일정을 확인해 주세요.</p>'
         return f'<section><h2>{title}</h2>{body}</section>'
     content = f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>KL & Selangor Weekend Events</title><meta name="description" content="쿠알라룸푸르와 셀랑고르의 최신 주말 행사, 가족·키즈 활동, 성인 문화 행사와 공휴일을 확인하세요.">
@@ -357,10 +359,10 @@ def build_page(events, hols):
 *{{box-sizing:border-box}}body{{margin:0;background:#f3f6fb;color:#172033;font-family:Arial,'Noto Sans KR',sans-serif;line-height:1.6}}header{{background:linear-gradient(135deg,#172554,#334e9b);color:#fff;padding:28px 17px}}header div,main,footer{{max-width:880px;margin:auto}}h1{{margin:0;font-size:clamp(25px,6vw,36px);line-height:1.2}}header p{{color:#dbeafe;margin:9px 0 0}}main{{padding:16px 12px 38px}}.notice{{background:#fff;border:1px solid #dfe5ef;border-radius:13px;padding:14px;margin:0 0 22px}}section{{margin:0 0 26px}}h2{{font-size:21px;margin:0 0 10px}}.event{{position:relative;background:#fff;border:1px solid #dfe5ef;border-radius:13px;padding:18px 15px 15px 58px;margin:10px 0;box-shadow:0 2px 7px #1b2b4a0b}}.number{{position:absolute;left:14px;top:16px;display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;color:#fff;font-weight:700}}.number-weekend{{background:#2563eb}}.number-family{{background:#16a34a}}.number-culture{{background:#9333ea}}.nav-links{{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}}.nav-links a{{display:inline-block;background:#edf3ff;border:1px solid #d5e1fb;border-radius:8px;padding:8px 10px;text-decoration:none;font-weight:700;font-size:13px}}h3{{font-size:17px;line-height:1.4;margin:9px 0}}.summary{{font-size:14px;color:#374151;background:#f8fafc;border-left:3px solid #94a3b8;padding:8px 10px;margin:8px 0}}.meta,.muted{{color:#536078;font-size:14px;margin:5px 0;overflow-wrap:anywhere}}a{{color:#2457b5;overflow-wrap:anywhere}}.top{{display:flex;gap:8px;align-items:center;flex-wrap:wrap}}.pill{{display:inline-block;background:#e8efff;color:#253f8c;padding:3px 9px;border-radius:18px;font-size:12px;font-weight:700}}.source{{font-size:12px;color:#6b7280}}.date-sat{{color:#2563eb;font-weight:700}}.date-sun,.date-holiday{{color:#dc2626;font-weight:700}}.holiday{{border-color:#fecaca}}.detail{{display:inline-block;margin-top:5px;font-weight:700;text-decoration:none}}footer{{padding:0 14px 30px;color:#687386;font-size:12px}}
 </style></head><body><header><div><h1>KL & Selangor Weekend Events</h1><p>주말에 갈 만한 행사만 모아보기 · 가족·키즈 · 성인·문화 · 공휴일</p></div></header><main>
 <div class="notice"><b>마지막 업데이트:</b> {stamp}<p class="muted">날짜·장소·가격은 원문에서 추출한 정보입니다. 일정 변경 가능성이 있으니 방문 전 상세 링크에서 주최 측 공지를 확인해 주세요. 확인되지 않은 정보는 ‘원문 확인’으로 표시합니다.</p><p><a href="https://kualalumpurwithkids.com/events/month/" target="_blank" rel="noopener">가족 행사 캘린더</a> · <a href="https://discover.calendar2u.com/" target="_blank" rel="noopener">전체 행사 캘린더</a> · <a href="https://www.warisankl.my/events" target="_blank" rel="noopener">Warisan KL 문화 행사</a> · <a href="https://www.dbkl.gov.my/en" target="_blank" rel="noopener">쿠알라룸푸르 시청 행사</a></p></div>
-{section("📌 다가오는 주말 추천 TOP", this_weekend[:12], numbered=True)}
-{section("👨‍👩‍👧‍👦 가족·키즈 행사", family[:20], numbered=True)}
-{section("🎭 성인·문화·공연·전시", adult[:20], numbered=True)}
-{section("📸 인스타그램 핫플·팝업·마켓·체험", instagram[:20], numbered=True)}
+{section("📌 다가오는 주말 추천 TOP", this_weekend[:12], numbered=True, number_class="number-weekend")}
+{section("👨‍👩‍👧‍👦 가족·키즈 행사", family[:20], numbered=True, number_class="number-family")}
+{section("🎭 성인·문화·공연·전시", adult[:20], numbered=True, number_class="number-culture")}
+{section("📸 인스타그램 핫플·팝업·마켓·체험", instagram[:20], numbered=True, number_class="number-culture")}
 <section><h2>📱 인스타그램에서 더 찾아보기</h2><article class="event"><p>인스타그램 게시물은 공개 범위와 로그인 제한 때문에 자동으로 행사 일정으로 수집되지 않을 수 있습니다. 아래에서 최신 팝업·마켓·체험 공지를 확인해 주세요.</p><div class="nav-links"><a href="https://www.instagram.com/explore/search/keyword/?q=kl%20weekend%20events" target="_blank" rel="noopener">KL 주말 행사 검색</a><a href="https://www.instagram.com/explore/search/keyword/?q=kl%20popup%20market" target="_blank" rel="noopener">팝업·마켓 검색</a><a href="https://www.instagram.com/explore/search/keyword/?q=selangor%20family%20events" target="_blank" rel="noopener">셀랑고르 가족 행사 검색</a></div></article></section>
 <section><h2>🇲🇾 다가오는 말레이시아 공휴일</h2>{''.join(holiday_card(x) for x in hols) or '<p class="muted">향후 45일 내 전국 공휴일이 없거나 공휴일 정보를 가져오지 못했습니다. 주별 공휴일은 별도로 확인해 주세요.</p>'}</section>
 </main><footer>KL & Selangor Weekend Events · 외부 공개 행사 캘린더를 모아 보여주는 안내 페이지입니다. 행사 개최 및 입장 조건은 주최 측 공식 안내를 기준으로 확인해 주세요.</footer></body></html>"""
