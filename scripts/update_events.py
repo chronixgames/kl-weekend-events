@@ -221,8 +221,8 @@ def korean_date(value):
 
 def korean_date_html(value):
     escaped = html.escape(korean_date(value))
-    escaped = re.sub(r"(\d{1,2}월\s*\d{1,2}일\(토\))", r'<span class="date-sat">\1</span>', escaped)
-    escaped = re.sub(r"(\d{1,2}월\s*\d{1,2}일\(일\))", r'<span class="date-sun">\1</span>', escaped)
+    escaped = re.sub(r"(\(토\))", r'<span class="date-sat">\1</span>', escaped)
+    escaped = re.sub(r"(\(일\))", r'<span class="date-sun">\1</span>', escaped)
     return escaped
 
 def is_instagram_event(item):
