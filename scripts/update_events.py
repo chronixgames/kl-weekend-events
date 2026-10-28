@@ -274,8 +274,16 @@ def kakao_send(events, hols):
             data=urllib.parse.urlencode(form).encode(),
             headers={"Content-Type": "application/x-www-form-urlencoded;charset=utf-8"}
         )
-        with urllib.request.urlopen(req, timeout=25) as r:
-            token_data = json.loads(r.read().decode())
+        try:
+            with urllib.request.urlopen(req, timeout=25) as r:
+                token_data = json.loads(r.read().decode())
+        except urllib.error.HTTPError as e:
+            # Log Kakao's diagnostic response, but never log credentials or tokens.
+            error_body = e.read().decode("utf-8", "replace")
+            raise RuntimeError(
+                f"Kakao token refresh failed (HTTP {e.code}). "
+                f"Kakao response: {error_body[:800]}"
+            ) from None
         access = token_data["access_token"]
         result = send(access)
         print("KAKAO_ACCESS_TOKEN_REFRESHED")
