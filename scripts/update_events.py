@@ -295,23 +295,23 @@ def kakao_send(events, hols):
     secret = os.environ.get("KAKAO_CLIENT_SECRET", "")
     weekend = upcoming_weekend_events(events)
     weekend_label = f"{(TODAY + timedelta(days=(5 - TODAY.weekday()) % 7)).strftime('%m/%d')}–{(TODAY + timedelta(days=(5 - TODAY.weekday()) % 7) + timedelta(days=1)).strftime('%m/%d')}"
-    lines = [f"🇲🇾 KL·셀랑고르 주말 행사 ({weekend_label})"]
+    weekend_label = f"{korean_date((TODAY + timedelta(days=(5 - TODAY.weekday()) % 7)).strftime('%d %B'))}–{korean_date((TODAY + timedelta(days=(5 - TODAY.weekday()) % 7) + timedelta(days=1)).strftime('%d %B'))}"
+    lines = [f"🇲🇾 KL·셀랑고르 주말 행사 | {weekend_label}"]
     if weekend:
         for item in weekend[:3]:
             title = korean_title(item.get("title", "행사"))
-            date = item.get("date", "날짜 원문 확인")
-            place = item.get("location", "장소 원문 확인")
-            price = item.get("price", "가격 원문 확인")
-            lines.append(f"• {title} | {date} | {place} | {price}")
+            date = korean_date(item.get("date", "일정 확인"))
+            place = item.get("location", "장소 확인")
+            price = item.get("price", "가격 확인")
+            lines.append(f"• {title} · {date} · {place} · {price}")
         if len(weekend) > 3:
             lines.append(f"외 {len(weekend)-3}개 행사")
     else:
-        lines.append("이번 주말 날짜를 신뢰성 있게 확인한 행사 정보를 찾지 못했습니다.")
-        lines.append("아래 페이지에서 행사 캘린더와 최신 안내를 확인해 주세요.")
+        lines.append("이번 주말 행사 일정은 아래 링크에서 확인해 주세요.")
     if hols:
         next_holiday = hols[0]
-        lines.append(f"🇲🇾 공휴일: {next_holiday.get('date','')} {next_holiday.get('localName') or next_holiday.get('name','')}")
-    lines.append("상세 행사 페이지: " + BASE)
+        lines.append(f"🇲🇾 공휴일: {korean_date(next_holiday.get('date',''))} {next_holiday.get('localName') or next_holiday.get('name','')}")
+    lines.append("🔎 전체 일정·Google 지도·Waze: " + BASE)
     text_body = "\n".join(lines)
     message = {
         "object_type": "text",
