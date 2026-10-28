@@ -189,7 +189,7 @@ KOREAN_MONTHS = {
 }
 def korean_date(value):
     for en, ko in KOREAN_MONTHS.items():
-        value = re.sub(rf"\\b{en}\\b", ko, value, flags=re.I)
+        value = re.sub(rf"\b{en}\b", ko, value, flags=re.I)
     return value
 
 def is_instagram_event(item):
@@ -201,7 +201,8 @@ def card(item, number=None):
     title = html.escape(korean_title(item.get("title","")) )
     link = html.escape(item.get("link","#"), quote=True)
     date = html.escape(korean_date(item.get("date","일정 원문 확인")))
-    location = html.escape(item.get("location","원문에서 장소 확인"))
+    location_text = re.sub(r"[,\s]*Malaysia\b", "", item.get("location","원문에서 장소 확인"), flags=re.I).strip(" ,·-")
+    location = html.escape(location_text or "장소 원문 확인")
     price = html.escape(item.get("price","원문에서 확인"))
     source = html.escape(item.get("source",""))
     category = html.escape(item.get("category","행사"))
@@ -262,6 +263,7 @@ def build_page(events, hols):
 {section("👨‍👩‍👧‍👦 가족·키즈 행사", family[:20], numbered=True)}
 {section("🎭 성인·문화·공연·전시", adult[:20], numbered=True)}
 {section("📸 인스타그램 핫플·팝업·마켓·체험", instagram[:20], numbered=True)}
+<section><h2>📱 인스타그램에서 더 찾아보기</h2><article class="event"><p>인스타그램 게시물은 공개 범위와 로그인 제한 때문에 자동으로 행사 일정으로 수집되지 않을 수 있습니다. 아래에서 최신 팝업·마켓·체험 공지를 확인해 주세요.</p><div class="nav-links"><a href="https://www.instagram.com/explore/search/keyword/?q=kl%20weekend%20events" target="_blank" rel="noopener">KL 주말 행사 검색</a><a href="https://www.instagram.com/explore/search/keyword/?q=kl%20popup%20market" target="_blank" rel="noopener">팝업·마켓 검색</a><a href="https://www.instagram.com/explore/search/keyword/?q=selangor%20family%20events" target="_blank" rel="noopener">셀랑고르 가족 행사 검색</a></div></article></section>
 <section><h2>🇲🇾 다가오는 말레이시아 공휴일</h2>{''.join(holiday_card(x) for x in hols) or '<p class="muted">향후 45일 내 전국 공휴일이 없거나 공휴일 정보를 가져오지 못했습니다. 주별 공휴일은 별도로 확인해 주세요.</p>'}</section>
 </main><footer>KL & Selangor Weekend Events · 외부 공개 행사 캘린더를 모아 보여주는 안내 페이지입니다. 행사 개최 및 입장 조건은 주최 측 공식 안내를 기준으로 확인해 주세요.</footer></body></html>"""
     os.makedirs("docs", exist_ok=True)
