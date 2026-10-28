@@ -298,7 +298,8 @@ def kakao_send(events, hols):
     weekend = upcoming_weekend_events(events)
     saturday = TODAY + timedelta(days=(5 - TODAY.weekday()) % 7)
     sunday = saturday + timedelta(days=1)
-    weekend_label = f"{korean_date(saturday.strftime('%d %B'))}–{korean_date(sunday.strftime('%d %B'))}"
+    weekdays_ko = ["월", "화", "수", "목", "금", "토", "일"]
+    weekend_label = f"{saturday.month}월 {saturday.day}일({weekdays_ko[saturday.weekday()]}) ~ {sunday.month}월 {sunday.day}일({weekdays_ko[sunday.weekday()]})"
     if weekend:
         headline = "🎉 이번 주말 KL·셀랑고르 나들이 & 이벤트"
         teaser = f"할로윈·가족 체험·팝업 등 주말 행사 {len(weekend)}개를 모았습니다."
