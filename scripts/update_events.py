@@ -189,22 +189,22 @@ KOREAN_MONTHS = {
 }
 def korean_date(value):
     # Normalize event dates to Korean month/day plus weekday, omitting year.
-    def render_day(day, month_name):
+    def render_day(day, month_name, year):
         try:
-            parsed = datetime.strptime(f"{int(day)} {month_name}", "%d %B").replace(year=2000)
+            parsed = datetime.strptime(f"{int(day)} {month_name} {int(year)}", "%d %B %Y")
             weekday = ["월", "화", "수", "목", "금", "토", "일"][parsed.weekday()]
             return f"{parsed.month}월 {parsed.day}일({weekday})"
         except ValueError:
             return f"{day} {month_name}"
     for en, ko in KOREAN_MONTHS.items():
         value = re.sub(
-            rf"\b(\d{1,2})(?:st|nd|rd|th)?\s+{en}\s*,?\s+20\d{2}\b",
-            lambda m, month=en: render_day(m.group(1), month),
+            rf"\b(\d{1,2})(?:st|nd|rd|th)?\s+{en}\s*,?\s+(20\d{2})\b",
+            lambda m, month=en: render_day(m.group(1), month, m.group(2)),
             value, flags=re.I,
         )
         value = re.sub(
-            rf"\b{en}\s+(\d{1,2})(?:st|nd|rd|th)?\s*,?\s+20\d{2}\b",
-            lambda m, month=en: render_day(m.group(1), month),
+            rf"\b{en}\s+(\d{1,2})(?:st|nd|rd|th)?\s*,?\s+(20\d{2})\b",
+            lambda m, month=en: render_day(m.group(1), month, m.group(2)),
             value, flags=re.I,
         )
     for en, ko in KOREAN_MONTHS.items():
