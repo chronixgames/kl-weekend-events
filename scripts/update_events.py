@@ -188,14 +188,27 @@ KOREAN_MONTHS = {
     "September":"9월", "October":"10월", "November":"11월", "December":"12월",
 }
 def korean_date(value):
+    # Convert English date strings such as "31 October 2026 - 1 November 2026"
+    # to Korean month/day format and omit the redundant year.
+    for en, ko in KOREAN_MONTHS.items():
+        value = re.sub(
+            rf"\b(\d{{1,2}})(?:st|nd|rd|th)?\s+{en}\s*,?\s+20\d{{2}}\b",
+            lambda m, month=ko: f"{month} {int(m.group(1))}일",
+            value,
+            flags=re.I,
+        )
+        value = re.sub(
+            rf"\b{en}\s+(\d{{1,2}})(?:st|nd|rd|th)?\s*,?\s+20\d{{2}}\b",
+            lambda m, month=ko: f"{month} {int(m.group(1))}일",
+            value,
+            flags=re.I,
+        )
+    # Also normalize any remaining English month names and remove year-only labels.
     for en, ko in KOREAN_MONTHS.items():
         value = re.sub(rf"\b{en}\b", ko, value, flags=re.I)
-    # Year is redundant on the event page; display Korean month/day only.
     value = re.sub(r"\b20\d{2}\b", "", value)
     value = re.sub(r"\s{2,}", " ", value)
-    value = re.sub(r"\s+([–—-])\s+", r" \1 ", value)
     return value.strip(" ,·")
-
 def is_instagram_event(item):
     source = (item.get("source", "") + " " + item.get("link", "")).lower()
     category = item.get("category", "")
