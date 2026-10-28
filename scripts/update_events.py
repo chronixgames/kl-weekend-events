@@ -188,27 +188,37 @@ KOREAN_MONTHS = {
     "September":"9월", "October":"10월", "November":"11월", "December":"12월",
 }
 def korean_date(value):
-    # Convert English date strings such as "31 October 2026 - 1 November 2026"
-    # to Korean month/day format and omit the redundant year.
+    # Normalize event dates to Korean month/day plus weekday, omitting year.
+    def render_day(day, month_name):
+        try:
+            parsed = datetime.strptime(f"{int(day)} {month_name}", "%d %B").replace(year=2000)
+            weekday = ["월", "화", "수", "목", "금", "토", "일"][parsed.weekday()]
+            return f"{parsed.month}월 {parsed.day}일({weekday})"
+        except ValueError:
+            return f"{day} {month_name}"
     for en, ko in KOREAN_MONTHS.items():
         value = re.sub(
-            rf"\b(\d{{1,2}})(?:st|nd|rd|th)?\s+{en}\s*,?\s+20\d{{2}}\b",
-            lambda m, month=ko: f"{month} {int(m.group(1))}일",
-            value,
-            flags=re.I,
+            rf"\b(\d{1,2})(?:st|nd|rd|th)?\s+{en}\s*,?\s+20\d{2}\b",
+            lambda m, month=en: render_day(m.group(1), month),
+            value, flags=re.I,
         )
         value = re.sub(
-            rf"\b{en}\s+(\d{{1,2}})(?:st|nd|rd|th)?\s*,?\s+20\d{{2}}\b",
-            lambda m, month=ko: f"{month} {int(m.group(1))}일",
-            value,
-            flags=re.I,
+            rf"\b{en}\s+(\d{1,2})(?:st|nd|rd|th)?\s*,?\s+20\d{2}\b",
+            lambda m, month=en: render_day(m.group(1), month),
+            value, flags=re.I,
         )
-    # Also normalize any remaining English month names and remove year-only labels.
     for en, ko in KOREAN_MONTHS.items():
         value = re.sub(rf"\b{en}\b", ko, value, flags=re.I)
     value = re.sub(r"\b20\d{2}\b", "", value)
     value = re.sub(r"\s{2,}", " ", value)
     return value.strip(" ,·")
+
+def korean_date_html(value):
+    escaped = html.escape(korean_date(value))
+    escaped = re.sub(r"(\d{1,2}월\s*\d{1,2}일\(토\))", r'<span class="date-sat">\1</span>', escaped)
+    escaped = re.sub(r"(\d{1,2}월\s*\d{1,2}일\(일\))", r'<span class="date-sun">\1</span>', escaped)
+    return escaped
+
 def is_instagram_event(item):
     source = (item.get("source", "") + " " + item.get("link", "")).lower()
     category = item.get("category", "")
@@ -217,7 +227,7 @@ def is_instagram_event(item):
 def card(item, number=None):
     title = html.escape(korean_title(item.get("title","")) )
     link = html.escape(item.get("link","#"), quote=True)
-    date = html.escape(korean_date(item.get("date","일정 원문 확인")))
+    date = korean_date_html(item.get("date","일정 원문 확인"))
     location_text = re.sub(r"[,\s]*Malaysia\b", "", item.get("location","원문에서 장소 확인"), flags=re.I).strip(" ,·-")
     location = html.escape(location_text or "장소 원문 확인")
     price = html.escape(item.get("price","원문에서 확인"))
@@ -232,9 +242,9 @@ def card(item, number=None):
 
 def holiday_card(item):
     name = html.escape(item.get("localName") or item.get("name") or "공휴일")
-    date = html.escape(item.get("date",""))
+    date = html.escape(korean_date(item.get("date","")))
     en = html.escape(item.get("name",""))
-    return f'<article class="event"><span class="pill">공휴일</span><h3>{name}</h3><p class="meta">{date} · {en}</p></article>'
+    return f'<article class="event"><span class="pill">공휴일</span><h3>{name}</h3><p class="meta"><span class="date-holiday">{date}</span> · {en}</p></article>'
 
 def parsed_event_dates(item):
     """Return only explicit calendar dates parsed from the source's event date string."""
@@ -273,7 +283,7 @@ def build_page(events, hols):
     content = f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>KL & Selangor Weekend Events</title><meta name="description" content="쿠알라룸푸르와 셀랑고르의 최신 주말 행사, 가족·키즈 활동, 성인 문화 행사와 공휴일을 확인하세요.">
 <style>
-*{{box-sizing:border-box}}body{{margin:0;background:#f3f6fb;color:#172033;font-family:Arial,'Noto Sans KR',sans-serif;line-height:1.6}}header{{background:linear-gradient(135deg,#172554,#334e9b);color:#fff;padding:28px 17px}}header div,main,footer{{max-width:880px;margin:auto}}h1{{margin:0;font-size:clamp(25px,6vw,36px);line-height:1.2}}header p{{color:#dbeafe;margin:9px 0 0}}main{{padding:16px 12px 38px}}.notice{{background:#fff;border:1px solid #dfe5ef;border-radius:13px;padding:14px;margin:0 0 22px}}section{{margin:0 0 26px}}h2{{font-size:21px;margin:0 0 10px}}.event{{position:relative;background:#fff;border:1px solid #dfe5ef;border-radius:13px;padding:18px 15px 15px 58px;margin:10px 0;box-shadow:0 2px 7px #1b2b4a0b}}.number{{position:absolute;left:14px;top:16px;display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:#253f8c;color:#fff;font-weight:700}}.nav-links{{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}}.nav-links a{{display:inline-block;background:#edf3ff;border:1px solid #d5e1fb;border-radius:8px;padding:8px 10px;text-decoration:none;font-weight:700;font-size:13px}}h3{{font-size:17px;line-height:1.4;margin:9px 0}}.meta,.muted{{color:#536078;font-size:14px;margin:5px 0;overflow-wrap:anywhere}}a{{color:#2457b5;overflow-wrap:anywhere}}.top{{display:flex;gap:8px;align-items:center;flex-wrap:wrap}}.pill{{display:inline-block;background:#e8efff;color:#253f8c;padding:3px 9px;border-radius:18px;font-size:12px;font-weight:700}}.source{{font-size:12px;color:#6b7280}}.detail{{display:inline-block;margin-top:5px;font-weight:700;text-decoration:none}}footer{{padding:0 14px 30px;color:#687386;font-size:12px}}
+*{{box-sizing:border-box}}body{{margin:0;background:#f3f6fb;color:#172033;font-family:Arial,'Noto Sans KR',sans-serif;line-height:1.6}}header{{background:linear-gradient(135deg,#172554,#334e9b);color:#fff;padding:28px 17px}}header div,main,footer{{max-width:880px;margin:auto}}h1{{margin:0;font-size:clamp(25px,6vw,36px);line-height:1.2}}header p{{color:#dbeafe;margin:9px 0 0}}main{{padding:16px 12px 38px}}.notice{{background:#fff;border:1px solid #dfe5ef;border-radius:13px;padding:14px;margin:0 0 22px}}section{{margin:0 0 26px}}h2{{font-size:21px;margin:0 0 10px}}.event{{position:relative;background:#fff;border:1px solid #dfe5ef;border-radius:13px;padding:18px 15px 15px 58px;margin:10px 0;box-shadow:0 2px 7px #1b2b4a0b}}.number{{position:absolute;left:14px;top:16px;display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:#253f8c;color:#fff;font-weight:700}}.nav-links{{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}}.nav-links a{{display:inline-block;background:#edf3ff;border:1px solid #d5e1fb;border-radius:8px;padding:8px 10px;text-decoration:none;font-weight:700;font-size:13px}}h3{{font-size:17px;line-height:1.4;margin:9px 0}}.meta,.muted{{color:#536078;font-size:14px;margin:5px 0;overflow-wrap:anywhere}}a{{color:#2457b5;overflow-wrap:anywhere}}.top{{display:flex;gap:8px;align-items:center;flex-wrap:wrap}}.pill{{display:inline-block;background:#e8efff;color:#253f8c;padding:3px 9px;border-radius:18px;font-size:12px;font-weight:700}}.source{{font-size:12px;color:#6b7280}}.date-sat{{color:#2563eb;font-weight:700}}.date-sun,.date-holiday{{color:#dc2626;font-weight:700}}.holiday{{border-color:#fecaca}}.detail{{display:inline-block;margin-top:5px;font-weight:700;text-decoration:none}}footer{{padding:0 14px 30px;color:#687386;font-size:12px}}
 </style></head><body><header><div><h1>KL & Selangor Weekend Events</h1><p>주말에 갈 만한 행사만 모아보기 · 가족·키즈 · 성인·문화 · 공휴일</p></div></header><main>
 <div class="notice"><b>마지막 업데이트:</b> {stamp}<p class="muted">날짜·장소·가격은 원문에서 추출한 정보입니다. 일정 변경 가능성이 있으니 방문 전 상세 링크에서 주최 측 공지를 확인해 주세요. 확인되지 않은 정보는 ‘원문 확인’으로 표시합니다.</p><p><a href="https://kualalumpurwithkids.com/events/month/" target="_blank" rel="noopener">가족 행사 캘린더</a> · <a href="https://discover.calendar2u.com/" target="_blank" rel="noopener">전체 행사 캘린더</a> · <a href="https://www.warisankl.my/events" target="_blank" rel="noopener">Warisan KL 문화 행사</a> · <a href="https://www.dbkl.gov.my/en" target="_blank" rel="noopener">쿠알라룸푸르 시청 행사</a></p></div>
 {section("📌 다가오는 주말 추천 TOP", this_weekend[:12], numbered=True)}
