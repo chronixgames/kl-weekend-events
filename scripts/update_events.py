@@ -188,10 +188,12 @@ EVENT_KO_TITLES = {
     "Sweet Little Spooks": "스위트 리틀 스푸크스 할로윈 행사",
     "Sweetly Spooky Adventure": "스위틀리 스푸키 할로윈 모험",
 }
-def korean_title(title):
+def korean_title(title, link=""):
     if title in EVENT_KO_TITLES:
         return EVENT_KO_TITLES[title]
-    t = title.lower()
+    t = title.lower() + " " + (link or "").lower()
+    # Use title and event URL slug together so small wording differences do not
+    # cause a generic placeholder title to appear on the published page.
     rules = [
         (("pokemon", "pokémon"), "포켓몬 기념 행사"),
         (("dinosaur",), "공룡 체험 행사"),
@@ -212,8 +214,25 @@ def korean_title(title):
     for keys, ko in rules:
         if any(key in t for key in keys):
             return ko
-    if re.search(r"[A-Za-z]", title):
-        return "주말 행사 (상세 내용 확인)"
+    # Specific, Korean fallback names for known events even when source titles vary.
+    fallback_rules = [
+        (("ombak-klcc", "pokemon-30th", "pokemon-30th-anniversary"), "옴박 KLCC 포켓몬 30주년 기념 행사"),
+        (("saya-seekor-dinosaur", "dinosaur-immersive", "dinosaur"), "옴박 KLCC 공룡 몰입형·인터랙티브 체험"),
+        (("deepavali-celebration", "deepavali"), "디파발리 축제"),
+        (("celebrate-the-colours-of-deepavali", "colours-of-deepavali"), "디파발리 컬러 축제"),
+        (("sweet-little-spooks",), "스위트 리틀 스푸크스 할로윈 행사"),
+        (("sweetly-spooky-adventure",), "스위틀리 스푸키 할로윈 모험"),
+        (("kiddie-ceo-halloween",), "키디 CEO 할로윈 체험 행사"),
+        (("halloween-sensory-friendly",), "감각 친화형 할로윈 체험"),
+        (("3d-printing-workshop",), "3D 프린팅 워크숍"),
+        (("nature-guided-walk",), "타만 투구 자연 가이드 산책"),
+        (("forest-bathing",), "타만 투구 숲속 힐링 체험"),
+        (("treats-sweets",), "캠퍼스 암팡 간식·디저트 행사"),
+        (("boo-gmbb", "halloween-weekend"), "GMBB 할로윈 주말 행사"),
+        (("klove-market",), "클로브 마켓"),
+        (("geekcon",), "긱콘 할로윈 에디션"),
+        (("sanrio",), "선리오 캐릭터 만남 행사"),
+    ]
     return title
 
 KOREAN_MONTHS = {
@@ -366,7 +385,7 @@ def event_image(item):
         return ""
 
 def card(item, number=None, number_class=None):
-    title = html.escape(korean_title(item.get("title","")) )
+    title = html.escape(korean_title(item.get("title",""), item.get("link","")) )
     link = html.escape(item.get("link","#"), quote=True)
     date = korean_date_html(clean_event_date(item.get("date","일정 원문 확인")) )
     location = html.escape(simplify_location(item.get("location","원문에서 장소 확인")))
