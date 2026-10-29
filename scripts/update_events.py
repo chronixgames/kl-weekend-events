@@ -180,12 +180,24 @@ EVENT_KO_TITLES = {
     "Boo! @ GMBB Halloween Weekend": "GMBB 할로윈 주말 행사 ‘부!’",
     "KLove Market": "클로브 마켓",
     "GeekCon Halloween Edition": "긱콘 할로윈 에디션",
+    "Pokémon 30th Anniversary at Ombak KLCC": "옴박 KLCC 포켓몬 30주년 기념 행사",
+    "Pokemon 30th Anniversary at Ombak KLCC": "옴박 KLCC 포켓몬 30주년 기념 행사",
+    "Saya Seekor Dinosaur: Immersive & Interactive Experience at Ombak KLCC": "옴박 KLCC 공룡 몰입형·인터랙티브 체험",
+    "Deepavali Celebration 2026 at Sunway Pyramid Mall": "선웨이 피라미드 디파발리 축제",
+    "Celebrate the Colours of Deepavali": "디파발리 컬러 축제",
+    "Sweet Little Spooks": "스위트 리틀 스푸크스 할로윈 행사",
+    "Sweetly Spooky Adventure": "스위틀리 스푸키 할로윈 모험",
 }
 def korean_title(title):
     if title in EVENT_KO_TITLES:
         return EVENT_KO_TITLES[title]
     t = title.lower()
     rules = [
+        (("pokemon", "pokémon"), "포켓몬 기념 행사"),
+        (("dinosaur",), "공룡 체험 행사"),
+        (("deepavali",), "디파발리 축제"),
+        (("sweet little spooks",), "스위트 리틀 스푸크스 할로윈 행사"),
+        (("sweetly spooky",), "스위틀리 스푸키 할로윈 모험"),
         (("market", "bazaar"), "주말 마켓"),
         (("halloween",), "할로윈 행사"),
         (("sanrio", "character", "meet and greet"), "캐릭터 만남 행사"),
