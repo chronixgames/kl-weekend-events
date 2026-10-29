@@ -256,29 +256,33 @@ def clean_event_date(value):
     return value.strip(" ·,-")
 
 def simplify_location(location):
-    """Show only a recognizable area/venue name, not a full street address."""
+    """Display a concise English area name, retaining a recognizable major venue."""
     raw = re.sub(r"[,\s]*Malaysia\b", "", location or "", flags=re.I).strip(" ,·-")
     low = raw.lower()
     rules = [
-        (("the campus ampang", "ampang"), "Ampang"),
-        (("sunway pyramid", "bandar sunway"), "Bandar Sunway"),
-        (("gmbb", "jalan robertson"), "Kuala Lumpur (GMBB)"),
-        (("kloe hotel", "jalan bukit bintang"), "Bukit Bintang"),
-        (("mitec",), "Kuala Lumpur (MITEC)"),
-        (("bangsar",), "Bangsar"),
-        (("taman tugu",), "Taman Tugu"),
-        (("hartamas",), "Sri Hartamas"),
+        (("the campus ampang",), "The Campus Ampang, Ampang"),
+        (("sunway pyramid",), "Sunway Pyramid, Bandar Sunway"),
+        (("gmbb",), "GMBB, Kuala Lumpur"),
+        (("kloe hotel",), "KLOE Hotel, Bukit Bintang"),
+        (("mitec",), "MITEC, Kuala Lumpur"),
+        (("hartamas shopping centre",), "Hartamas Shopping Centre, Sri Hartamas"),
+        (("taman tugu",), "Taman Tugu, Kuala Lumpur"),
+        (("bangsar",), "Bangsar, Kuala Lumpur"),
     ]
     for keys, label in rules:
         if any(key in low for key in keys):
             return label
-    # Fall back to the first meaningful venue/area segment, stripping postcode/street detail.
     parts = [p.strip() for p in raw.split(",") if p.strip()]
     if not parts:
-        return "장소 원문 확인"
-    first = parts[0]
-    first = re.sub(r"\b\d{4,6}\b", "", first).strip()
-    return first[:70] or "장소 원문 확인"
+        return "Location to be confirmed"
+    # Retain the venue name plus the next locality segment, but drop street/postcode detail.
+    first = re.sub(r"\b\d{4,6}\b", "", parts[0]).strip()
+    if len(parts) > 1 and not re.search(r"\b(jalan|lorong|persiaran|level|lot|postcode)\b", parts[1], re.I):
+        second = re.sub(r"\b\d{4,6}\b", "", parts[1]).strip()
+        result = f"{first}, {second}" if second and second.lower() not in first.lower() else first
+    else:
+        result = first
+    return result[:90] or "Location to be confirmed"
 
 def event_intro(item):
     text = (item.get("title", "") + " " + item.get("category", "")).lower()
