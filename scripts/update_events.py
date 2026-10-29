@@ -315,29 +315,35 @@ def audience_recommendation(item):
     return age, "남녀 모두"
 
 _EVENT_IMAGE_CACHE = {}
+class EventImageParser(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.image_url = ""
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag == "meta":
+            prop = (attrs.get("property") or attrs.get("name") or "").lower()
+            content = (attrs.get("content") or "").strip()
+            if prop in ("og:image", "og:image:url", "twitter:image", "twitter:image:src") and content and not self.image_url:
+                self.image_url = content
+        elif tag == "img" and not self.image_url:
+            candidate = (attrs.get("src") or attrs.get("data-src") or attrs.get("data-lazy-src") or "").strip()
+            if candidate and not candidate.startswith("data:"):
+                self.image_url = candidate
+
 def event_image(item):
     url = item.get("link", "")
-    if not url.startswith("http"):
+    if not url.startswith("http") or any(x in url.lower() for x in ("instagram.com", "facebook.com", "tiktok.com")):
         return ""
     if url in _EVENT_IMAGE_CACHE:
         return _EVENT_IMAGE_CACHE[url]
     try:
-        raw = get(url).decode("utf-8", "replace")
-        patterns = [
-            r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']',
-            r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']',
-            r'<meta[^>]+name=["\']twitter:image["\'][^>]+content=["\']([^"\']+)["\']',
-            r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+name=["\']twitter:image["\']',
-        ]
-        image_url = ""
-        for pattern in patterns:
-            m = re.search(pattern, raw, re.I)
-            if m:
-                image_url = html.unescape(m.group(1)).strip()
-                break
-        if image_url.startswith("//"):
-            image_url = "https:" + image_url
-        if not image_url.startswith("https://"):
+        raw = get(url, headers={"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124 Safari/537.36","Accept":"text/html,application/xhtml+xml"})
+        parser = EventImageParser()
+        parser.feed(raw.decode("utf-8", "replace"))
+        image_url = html.unescape(parser.image_url).strip()
+        image_url = urllib.parse.urljoin(url, image_url)
+        if not image_url.startswith(("https://", "http://")) or any(x in image_url.lower() for x in ("logo", "avatar", "icon", "favicon")):
             image_url = ""
         _EVENT_IMAGE_CACHE[url] = image_url
         return image_url
@@ -357,7 +363,7 @@ def card(item, number=None, number_class=None):
     source = html.escape(item.get("source",""))
     category = html.escape(item.get("category","행사"))
     image_url = html.escape(event_image(item), quote=True)
-    image_html = f'<img class="event-image" src="{image_url}" alt="{title}" loading="lazy">' if image_url else '<div class="event-image-placeholder">🎉</div>'
+    image_html = f'<img class="event-image" src="{image_url}" alt="{title}" loading="lazy">' if image_url else '<div class="event-image-placeholder">이미지 없음</div>'
     number_class = number_class or ("number-family" if item.get("category") == "가족·키즈" else ("number-culture" if item.get("category") == "성인·문화" else "number-weekend"))
     number_colors = {"number-weekend": "#2563eb", "number-family": "#0891b2", "number-culture": "#d97706"}
     number_color = number_colors.get(number_class, "#2563eb")
