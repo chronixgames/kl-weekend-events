@@ -192,8 +192,29 @@ def korean_title(title, link=""):
     if title in EVENT_KO_TITLES:
         return EVENT_KO_TITLES[title]
     t = title.lower() + " " + (link or "").lower()
-    # Use title and event URL slug together so small wording differences do not
-    # cause a generic placeholder title to appear on the published page.
+    t = title.lower() + " " + (link or "").lower()
+    # Match known event names and URL slugs before broader category translations.
+    specific_rules = [
+        (("pokemon-30th", "pokemon 30th", "pokémon 30th"), "옴박 KLCC 포켓몬 30주년 기념 행사"),
+        (("saya-seekor-dinosaur", "dinosaur-immersive", "dinosaur immersive"), "옴박 KLCC 공룡 몰입형·인터랙티브 체험"),
+        (("celebrate-the-colours-of-deepavali", "colours-of-deepavali"), "디파발리 컬러 축제"),
+        (("deepavali-celebration", "deepavali celebration"), "선웨이 피라미드 디파발리 축제"),
+        (("sweet-little-spooks", "sweet little spooks"), "스위트 리틀 스푸크스 할로윈 행사"),
+        (("sweetly-spooky-adventure", "sweetly spooky"), "스위틀리 스푸키 할로윈 모험"),
+        (("kiddie-ceo-halloween",), "키디 CEO 할로윈 체험 행사"),
+        (("halloween-sensory-friendly",), "감각 친화형 할로윈 체험"),
+        (("3d-printing-workshop",), "하르타마스 쇼핑센터 3D 프린팅 워크숍"),
+        (("nature-guided-walk",), "타만 투구 자연 가이드 산책"),
+        (("forest-bathing",), "타만 투구 숲속 힐링 체험"),
+        (("treats-sweets", "treats & sweets"), "캠퍼스 암팡 간식·디저트 행사"),
+        (("boo-gmbb", "halloween-weekend"), "GMBB 할로윈 주말 행사 ‘부!’"),
+        (("klove-market",), "클로브 마켓"),
+        (("geekcon",), "긱콘 할로윈 에디션"),
+        (("sanrio",), "선리오 캐릭터와 만나는 행사"),
+    ]
+    for keys, ko in specific_rules:
+        if any(key in t for key in keys):
+            return ko
     rules = [
         (("pokemon", "pokémon"), "포켓몬 기념 행사"),
         (("dinosaur",), "공룡 체험 행사"),
@@ -214,26 +235,8 @@ def korean_title(title, link=""):
     for keys, ko in rules:
         if any(key in t for key in keys):
             return ko
-    # Specific, Korean fallback names for known events even when source titles vary.
-    fallback_rules = [
-        (("ombak-klcc", "pokemon-30th", "pokemon-30th-anniversary"), "옴박 KLCC 포켓몬 30주년 기념 행사"),
-        (("saya-seekor-dinosaur", "dinosaur-immersive", "dinosaur"), "옴박 KLCC 공룡 몰입형·인터랙티브 체험"),
-        (("deepavali-celebration", "deepavali"), "디파발리 축제"),
-        (("celebrate-the-colours-of-deepavali", "colours-of-deepavali"), "디파발리 컬러 축제"),
-        (("sweet-little-spooks",), "스위트 리틀 스푸크스 할로윈 행사"),
-        (("sweetly-spooky-adventure",), "스위틀리 스푸키 할로윈 모험"),
-        (("kiddie-ceo-halloween",), "키디 CEO 할로윈 체험 행사"),
-        (("halloween-sensory-friendly",), "감각 친화형 할로윈 체험"),
-        (("3d-printing-workshop",), "3D 프린팅 워크숍"),
-        (("nature-guided-walk",), "타만 투구 자연 가이드 산책"),
-        (("forest-bathing",), "타만 투구 숲속 힐링 체험"),
-        (("treats-sweets",), "캠퍼스 암팡 간식·디저트 행사"),
-        (("boo-gmbb", "halloween-weekend"), "GMBB 할로윈 주말 행사"),
-        (("klove-market",), "클로브 마켓"),
-        (("geekcon",), "긱콘 할로윈 에디션"),
-        (("sanrio",), "선리오 캐릭터 만남 행사"),
-    ]
-    return title
+    # Never publish a generic placeholder as an event title.
+    return "주말 문화·체험 행사"
 
 KOREAN_MONTHS = {
     "January":"1월", "February":"2월", "March":"3월", "April":"4월",
