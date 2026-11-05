@@ -494,19 +494,50 @@ def kakao_send(events, hols):
     sunday = saturday + timedelta(days=1)
     weekdays_ko = ["월", "화", "수", "목", "금", "토", "일"]
     weekend_label = f"{saturday.month}월 {saturday.day}일({weekdays_ko[saturday.weekday()]}) ~ {sunday.month}월 {sunday.day}일({weekdays_ko[sunday.weekday()]})"
-    if weekend:
-        headline = "🎉 이번 주말 KL·셀랑고르 나들이 & 이벤트"
-        teaser = f"할로윈·가족 체험·팝업 등 주말 행사 {len(weekend)}개를 모았습니다."
+    # Kakao text templates are limited to 200 characters. Use a List/Feed
+    # template so each event's Korean title, date, venue and price appear in-chat.
+    def event_content(item):
+        title = korean_title(item.get("title", ""), item.get("link", ""))[:60]
+        date = korean_date(clean_event_date(item.get("date", ""))) or "일정 원문 확인"
+        venue = simplify_location(item.get("location", "원문에서 장소 확인"))
+        price = item.get("price", "원문에서 확인")
+        category = item.get("category", "행사")
+        description = f"📅 {date}\n📍 {venue}\n🎟️ {price} · {category}"
+        event_url = item.get("link") or BASE
+        return {
+            "title": title,
+            "description": description[:180],
+            "link": {"web_url": event_url, "mobile_web_url": event_url}
+        }
+
+    if len(weekend) >= 2:
+        selected = weekend[:3]
+        message = {
+            "object_type": "list",
+            "header_title": f"🎉 이번 주말 KL·셀랑고르 행사 | {weekend_label}",
+            "header_link": {"web_url": BASE, "mobile_web_url": BASE},
+            "contents": [event_content(item) for item in selected],
+            "button_title": "전체 행사 보기"
+        }
+    elif len(weekend) == 1:
+        item = weekend[0]
+        content = event_content(item)
+        message = {
+            "object_type": "feed",
+            "content": {
+                "title": content["title"],
+                "description": content["description"],
+                "link": content["link"]
+            },
+            "button_title": "전체 행사 보기"
+        }
     else:
-        headline = "🇲🇾 KL·셀랑고르 주말 행사 안내"
-        teaser = "이번 주말 가볼 만한 행사와 이벤트 일정을 확인해 보세요."
-    text_body = f"{headline}\n📅 {weekend_label}\n{teaser}\n\n👇 행사 일정·장소·가격·지도 보기\n{BASE}"
-    message = {
-        "object_type": "text",
-        "text": text_body[:1900],
-        "link": {"web_url": BASE, "mobile_web_url": BASE},
-        "button_title": "주말 행사 보기"
-    }
+        message = {
+            "object_type": "text",
+            "text": f"🇲🇾 KL·셀랑고르 주말 행사 안내\n📅 {weekend_label}\n이번 주말 등록된 행사가 없습니다. 전체 일정은 페이지에서 확인해 주세요.",
+            "link": {"web_url": BASE, "mobile_web_url": BASE},
+            "button_title": "행사 페이지 보기"
+        }
     def send(token):
         payload = urllib.parse.urlencode({"template_object": json.dumps(message, ensure_ascii=False)}).encode()
         req = urllib.request.Request(
