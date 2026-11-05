@@ -576,7 +576,7 @@ def kakao_send(events, hols):
             print("A_REFRESH_TOKEN_WAS_ROTATED")
     if not result.startswith("{") or '"result_code":0' not in result:
         raise RuntimeError("Kakao message send failed. Check token/secrets. Response: " + result[:400])
-    print(f"KAKAO_MESSAGE_SENT: short digest for {weekend_label}; {len(weekend)} dated events linked")
+    print(f"KAKAO_MESSAGE_SENT: detailed event cards for {weekend_label}; {len(weekend)} dated events available; sent {min(len(weekend), 3)} event details")
 
 def main():
     events = collect_events()
