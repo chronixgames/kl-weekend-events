@@ -502,7 +502,7 @@ def kakao_send(events, hols):
         venue = simplify_location(item.get("location", "원문에서 장소 확인"))
         price = item.get("price", "원문에서 확인")
         category = item.get("category", "행사")
-        description = f"📅 {date}\n📍 {venue}\n🎟️ {price} · {category}"
+        description = f"📅 {date} · 📍 {venue}\n🎟️ {price} · {category}"
         event_url = item.get("link") or BASE
         return {
             "title": title,
