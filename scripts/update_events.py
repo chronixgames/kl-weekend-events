@@ -543,6 +543,7 @@ def upcoming_weekend_events(events):
                 continue
     return selected
 
+# Immediate test-send trigger; keep the established numbered event-card format.
 def kakao_send(events, hols):
     rest = os.environ["KAKAO_REST_API_KEY"]
     access = os.environ.get("KAKAO_ACCESS_TOKEN", "")
