@@ -556,13 +556,13 @@ def kakao_send(events, hols):
     # Kakao text templates are limited to 200 characters. Use a List/Feed
     # template so each event's Korean title, date, venue and price appear in-chat.
     def event_content(item):
-        title = korean_title(item.get("title", ""), item.get("link", ""))[:60]
+        title = str(item.get("_display_number", "")) + ". " + korean_title(item.get("title", ""), item.get("link", ""))[:50]
         date = korean_date(clean_event_date(item.get("date", ""))) or "일정 원문 확인"
         venue = simplify_location(item.get("location", "원문에서 장소 확인"))
         price = item.get("price", "원문에서 확인")
         category = item.get("category", "행사")
-        description = f"📅 {date} · 📍 {venue}\n🎟️ {price} · {category}"
-        event_url = item.get("link") or BASE
+        description = f"📅 {date}\n📍 {venue} · 🎟️ {price}\n🏷️ {category}"
+        event_url = BASE + "events/" + event_slug(item) + ".html"
         return {
             "title": title,
             "description": description[:180],
@@ -571,9 +571,11 @@ def kakao_send(events, hols):
 
     if len(weekend) >= 2:
         selected = weekend[:3]
+        for idx, item in enumerate(selected, start=1):
+            item["_display_number"] = idx
         message = {
             "object_type": "list",
-            "header_title": f"🎉 이번 주말 KL·셀랑고르 행사 | {weekend_label}",
+            "header_title": f"KL & Selangor Weekend Events | 이번 주말 추천 행사\n{weekend_label}",
             "header_link": {"web_url": BASE, "mobile_web_url": BASE},
             "contents": [event_content(item) for item in selected],
             "button_title": "전체 행사 보기"
