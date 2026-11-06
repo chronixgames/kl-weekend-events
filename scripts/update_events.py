@@ -1,4 +1,4 @@
-import os, html, json, re, urllib.parse, urllib.request, urllib.error
+import os, html, json, re, hashlib, urllib.parse, urllib.request, urllib.error
 from datetime import datetime, timedelta, timezone
 from html.parser import HTMLParser
 
@@ -109,7 +109,7 @@ def collect_page(url, source_name, limit=80):
             pm = re.search(r"\bRM\s?\d+(?:\.\d{1,2})?(?:\s*[-–]\s*RM?\s?\d+(?:\.\d{1,2})?)?", details, re.I)
             if pm:
                 price = pm.group(0).replace(" ", "")
-            rows.append({"title":title,"link":link,"date":date_text,"location":location or "원문에서 장소 확인","price":price or "원문에서 확인","source":source_name,"category":category_for(title,details)})
+            rows.append({"title":title,"link":link,"date":date_text,"location":location or "원문에서 장소 확인","price":price or "원문에서 확인","source":source_name,"category":category_for(title,details),"details":details[:1400]})
             if len(rows) >= limit:
                 break
         return rows
@@ -387,9 +387,40 @@ def event_image(item):
         _EVENT_IMAGE_CACHE[url] = ""
         return ""
 
+def event_slug(item):
+    identity = (item.get("title", "") + "|" + item.get("link", "")).encode("utf-8")
+    safe = re.sub(r"[^a-z0-9]+", "-", item.get("title", "").lower()).strip("-")[:48]
+    return (safe or "event") + "-" + hashlib.sha1(identity).hexdigest()[:8]
+
+def detail_page(item):
+    title_text = korean_title(item.get("title", ""), item.get("link", ""))
+    title = html.escape(title_text)
+    date = html.escape(korean_date(clean_event_date(item.get("date", "일정 원문 확인"))))
+    location_text = simplify_location(item.get("location", "원문에서 장소 확인"))
+    location = html.escape(location_text)
+    price = html.escape(item.get("price", "원문에서 확인"))
+    category = html.escape(item.get("category", "행사"))
+    source = html.escape(item.get("source", ""))
+    original = html.escape(item.get("link", BASE), quote=True)
+    intro = html.escape(event_intro(item))
+    audience, gender = audience_recommendation(item)
+    audience = html.escape(audience + " · " + gender)
+    raw_details = " ".join((item.get("details") or "").split())
+    if raw_details:
+        description = html.escape(raw_details[:1400])
+        description_html = f'<section><h2>행사 원문에서 확인한 내용</h2><p>{description}</p></section>'
+    else:
+        description_html = f'<section><h2>행사 소개</h2><p>{intro}</p><p>세부 프로그램과 참여 조건은 주최 측 원문에서 확인해 주세요.</p></section>'
+    maps_q = urllib.parse.quote(item.get("location", "Kuala Lumpur, Malaysia"))
+    google_maps = "https://www.google.com/maps/search/?api=1&query=" + maps_q
+    waze = "https://waze.com/ul?q=" + maps_q + "&navigate=yes"
+    return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{title} | KL Weekend Events</title><meta name="description" content="{intro}">
+<style>*{{box-sizing:border-box}}body{{margin:0;background:#f3f6fb;color:#172033;font-family:Arial,'Noto Sans KR',sans-serif;line-height:1.7}}header{{background:linear-gradient(135deg,#172554,#334e9b);color:white;padding:26px 17px}}header div,main,footer{{max-width:760px;margin:auto}}main{{padding:20px 14px 42px}}h1{{font-size:clamp(23px,5vw,32px);line-height:1.35;margin:10px 0}}h2{{font-size:18px;margin:0 0 10px}}.pill{{display:inline-block;background:#e8efff;color:#253f8c;padding:3px 10px;border-radius:18px;font-size:12px;font-weight:bold}}.panel{{background:white;border:1px solid #dfe5ef;border-radius:14px;padding:18px;margin:14px 0}}.meta{{padding:9px 0;border-bottom:1px solid #edf0f5}}.meta:last-child{{border:0}}.muted{{color:#64748b;font-size:13px}}a{{color:#2457b5;overflow-wrap:anywhere}}.actions{{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}}.actions a{{display:inline-block;padding:10px 13px;border-radius:9px;background:#edf3ff;text-decoration:none;font-weight:bold}}.back{{color:#dbeafe}}footer{{padding:0 14px 28px;color:#687386;font-size:12px}}</style></head><body><header><div><a class="back" href="{BASE}">← 전체 행사 목록</a><h1>{title}</h1><span class="pill">{category}</span></div></header><main><section class="panel"><h2>행사 기본 정보</h2><div class="meta">📅 <b>일정</b> · {date}</div><div class="meta">📍 <b>장소</b> · {location}</div><div class="meta">🎟️ <b>입장·참가 비용</b> · {price}</div><div class="meta">👥 <b>추천 대상</b> · {audience}</div><div class="meta">🔎 <b>정보 출처</b> · {source}</div></section>{description_html}<section class="panel"><h2>방문 전 확인</h2><p>행사 시간, 예약 필요 여부, 티켓 잔여 수량 및 연령 제한은 변경될 수 있습니다. 방문 전 주최 측 원문에서 최신 안내를 확인해 주세요.</p><div class="actions"><a href="{original}" target="_blank" rel="noopener">주최 측 원문·상세 공지 ↗</a><a href="{google_maps}" target="_blank" rel="noopener">Google 지도</a><a href="{waze}" target="_blank" rel="noopener">Waze 길찾기</a></div></section></main><footer>KL & Selangor Weekend Events · 정보는 공개된 행사 안내를 바탕으로 정리했습니다.</footer></body></html>"""
+
 def card(item, number=None, number_class=None):
     title = html.escape(korean_title(item.get("title",""), item.get("link","")) )
-    link = html.escape(item.get("link","#"), quote=True)
+    detail_url = "events/" + event_slug(item) + ".html"
+    detail_href = html.escape(detail_url, quote=True)
     date = korean_date_html(clean_event_date(item.get("date","일정 원문 확인")) )
     location = html.escape(simplify_location(item.get("location","원문에서 장소 확인")))
     intro = html.escape(event_intro(item))
@@ -402,11 +433,7 @@ def card(item, number=None, number_class=None):
     number_colors = {"number-weekend": "#2563eb", "number-family": "#0891b2", "number-culture": "#d97706"}
     number_color = number_colors.get(number_class, "#2563eb")
     number_html = f'<span class="number {number_class}" style="background-color:{number_color};color:#ffffff !important">{number}</span>' if number is not None else ""
-    maps_q = urllib.parse.quote(item.get("location", "Kuala Lumpur, Malaysia"))
-    google_maps = "https://www.google.com/maps/search/?api=1&query=" + maps_q
-    waze = "https://waze.com/ul?q=" + maps_q + "&navigate=yes"
-    nav = f'<div class="nav-links"><a href="{html.escape(google_maps, quote=True)}" target="_blank" rel="noopener">📍 Google 지도 길찾기</a><a href="{html.escape(waze, quote=True)}" target="_blank" rel="noopener">🚗 Waze 길찾기</a></div>'
-    return f'<article class="event">{number_html}<div class="event-content"><div class="top"><span class="pill">{category}</span><span class="source">{source}</span></div><h3><a href="{link}" target="_blank" rel="noopener">{title}</a></h3><p class="summary">{intro}</p><p class="meta">📅 {date}</p><p class="meta">📍 {location}</p><p class="meta">👥 {audience}</p><p class="meta">🎟️ {price}</p>{nav}<p><a class="detail" href="{link}" target="_blank" rel="noopener">공식/원문에서 상세 정보 확인 ↗</a></p></div></article>'
+    return f'<article class="event">{number_html}<div class="event-content"><div class="top"><span class="pill">{category}</span><span class="source">{source}</span></div><h3><a href="{detail_href}">{title}</a></h3><p class="summary">{intro}</p><p class="meta">📅 {date}</p><p class="meta">📍 {location}</p><p class="meta">👥 {audience}</p><p class="meta">🎟️ {price}</p><p><a class="detail" href="{detail_href}">행사 상세 내용 보기 →</a></p></div></article>'
 
 def holiday_card(item):
     name = html.escape(item.get("localName") or item.get("name") or "공휴일")
@@ -442,6 +469,12 @@ def build_page(events, hols):
     non_instagram = [x for x in future_events if x not in instagram]
     family = [x for x in non_instagram if x["category"] == "가족·키즈"]
     adult = [x for x in non_instagram if x["category"] != "가족·키즈"]
+    # Generate one internal detail page per event before rendering the index.
+    os.makedirs("docs/events", exist_ok=True)
+    for item in future_events:
+        detail_path = os.path.join("docs", "events", event_slug(item) + ".html")
+        with open(detail_path, "w", encoding="utf-8") as detail_file:
+            detail_file.write(detail_page(item))
     if not this_weekend:
         print("NO_VERIFIED_EVENTS_FOR_UPCOMING_WEEKEND: page will be refreshed without stale event recommendations")
     stamp = NOW.strftime("%Y-%m-%d %H:%M MYT")
