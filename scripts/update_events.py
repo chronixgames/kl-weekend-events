@@ -133,6 +133,23 @@ def verified_weekend_fallbacks():
         {"title":"GeekCon Halloween Edition","link":"https://geekconasia.com/","date":"30 October 2026 - 1 November 2026","location":"MITEC, Kuala Lumpur","price":"RM15부터 (일반 입장)","source":"GeekCon Asia 공식","category":"가족·키즈"}
     ]
 
+def verified_upcoming_fallbacks():
+    """Dated event leads checked against public event listings for 7–9 Nov 2026."""
+    if not (TODAY <= datetime(2026, 11, 9).date() and HORIZON >= datetime(2026, 11, 7).date()):
+        return []
+    return [
+        {"title":"Planting Session and Sensory Walk at Sayur In The City","link":"https://kualalumpurwithkids.com/events/month/2026-11/","date":"7 November 2026","time":"9:00 am - 10:00 am","location":"Sayur in The City, Jalan Hang Jebat, Kuala Lumpur","price":"RM20","source":"KL With Kids","category":"가족·키즈","details":"Farm tour and sensory walk at Sayur in The City. 7 November 2026, 9:00 am–10:00 am. Ticket RM20. Check the organiser listing before visiting."},
+        {"title":"Little Mixue Maker Experience","link":"https://kualalumpurwithkids.com/events/month/2026-11/","date":"7 November 2026","time":"10:00 am - 12:00 pm","location":"Mixue Kepong, Kuala Lumpur","price":"무료","source":"KL With Kids","category":"가족·키즈","details":"A two-hour kids' activity where children learn about Mixue, join interactive quiz games, and make milk tea and an ice cream sundae. 7 November 2026, 10:00 am–12:00 pm. Free."},
+        {"title":"Mini Burger Chef Workshop at Marrybrown Petaling Jaya","link":"https://kualalumpurwithkids.com/events/month/2026-11/","date":"7 November 2026","time":"10:30 am - 12:30 pm","location":"Marrybrown, Petaling Jaya, Selangor","price":"RM40","source":"KL With Kids","category":"가족·키즈","details":"A hands-on mini burger chef workshop for young foodies. 7 November 2026, 10:30 am–12:30 pm. RM40."},
+        {"title":"Colouring & Drawing Contest Mid Valley KL 2026","link":"https://kualalumpurwithkids.com/events/month/2026-11/","date":"7 November 2026 - 9 November 2026","time":"11:00 am - 9:00 pm","location":"Mid Valley Exhibition Centre, Kuala Lumpur","price":"무료","source":"KL With Kids","category":"가족·키즈","details":"A children's colouring and drawing contest by TCC Kidz World for ages 5–12, including a 100-metre art scroll activity. 7–9 November 2026 at Mid Valley Exhibition Centre. Free entry."},
+        {"title":"Book Tour with The Nurts at TWIGS Elmina Shah Alam","link":"https://kualalumpurwithkids.com/events/month/2026-11/","date":"7 November 2026","time":"1:30 pm - 3:30 pm","location":"TWIGS Elmina Shah Alam, Selangor","price":"원문에서 확인","source":"KL With Kids","category":"가족·키즈","details":"Family book tour with The Nurts at TWIGS Elmina Shah Alam. 7 November 2026, 1:30 pm–3:30 pm. Check the organiser listing for admission details."},
+        {"title":"Mini Pizza Chef Workshop Bukit Jalil 2026","link":"https://kualalumpurwithkids.com/events/month/2026-11/","date":"7 November 2026","time":"2:30 pm - 3:30 pm","location":"My Pizza Lab, Bukit Jalil, Kuala Lumpur","price":"RM40","source":"KL With Kids","category":"가족·키즈","details":"A hands-on mini pizza chef workshop for children. 7 November 2026, 2:30 pm–3:30 pm. RM40."},
+        {"title":"Mini Sushi Chef at Sushi King IOI City Mall Putrajaya","link":"https://kualalumpurwithkids.com/events/month/2026-11/","date":"8 November 2026","time":"10:00 am - 12:00 pm","location":"IOI City Mall, Putrajaya","price":"RM40","source":"KL With Kids","category":"가족·키즈","details":"A children's mini sushi chef session at Sushi King, IOI City Mall. 8 November 2026, 10:00 am–12:00 pm. RM40."},
+        {"title":"Tempatan Fest 2026: Back To Culture","link":"https://www.tempatanfest.com/","date":"7 November 2026 - 8 November 2026","time":"10:00 am - 10:00 pm","location":"Hall C, MAEPS Serdang, Selangor","price":"RM10/일","source":"Tempatan Fest 공식","category":"성인·문화","details":"Tempatan Fest 2026 brings together streetwear, fashion, coffee and desserts, vintage and analogue markets, body care, motoring, music, art and extreme sports. 7–8 November 2026, 10:00 am–10:00 pm, Hall C, MAEPS Serdang. RM10 per person per day; children under 10 enter free."},
+        {"title":"2nd TCE Kidz World Expo","link":"https://eamo.eamo.biz/e2853-20261107-2nd-tce-kidz-world-expo","date":"7 November 2026 - 9 November 2026","time":"11:00 am - 9:00 pm","location":"Mid Valley Exhibition Centre, Kuala Lumpur","price":"원문에서 확인","source":"TCE Kidz World","category":"가족·키즈","details":"A family expo with kids' brands, play and shopping, a treasure hunt, lucky draw and up to 10 activities and workshops. 7–9 November 2026, 11:00 am–9:00 pm, Mid Valley Exhibition Centre. Check organiser for ticket details."},
+        {"title":"Nostalgia Anak Kampung: Kerja Kampung","link":"https://www.littlestepsasia.com/kuala-lumpur/events/seasonal-events-guides/top-family-friendly-events/","date":"6 November 2026 - 8 November 2026","time":"9:00 am - 10:00 pm","location":"Dataran Muzium Negara, Kuala Lumpur","price":"무료","source":"Little Steps Asia","category":"가족·키즈","details":"A heritage-themed family event with traditional kampung activities, hands-on workshops, games, competitions, cultural performances, local food and shopping stalls. 6–7 November 9:00 am–10:00 pm; 8 November 9:00 am–6:00 pm. Free entry."}
+    ]
+
 def collect_events():
     urls = [
         (f"https://kualalumpurwithkids.com/whats-on-in-kuala-lumpur-{MONTHS[TODAY.month-1]}/", "Kuala Lumpur with Kids"),
@@ -147,6 +164,11 @@ def collect_events():
             if key not in seen:
                 seen.add(key)
                 all_events.append(item)
+    for item in verified_upcoming_fallbacks():
+        key = (item["title"].lower(), item["date"].lower())
+        if key not in seen:
+            seen.add(key)
+            all_events.append(item)
     for item in verified_weekend_fallbacks():
         key = (item["title"].lower(), item["date"].lower())
         if key not in seen:
@@ -163,6 +185,10 @@ def holidays():
         out = [x for x in data if TODAY.isoformat() <= x.get("date","") <= HORIZON.isoformat()]
     except Exception:
         pass
+    if TODAY <= datetime(2026,11,8).date() <= HORIZON:
+        out.append({"date":"2026-11-08","localName":"디파발리 (Deepavali)","name":"Deepavali"})
+    if TODAY <= datetime(2026,11,9).date() <= HORIZON:
+        out.append({"date":"2026-11-09","localName":"디파발리 대체 공휴일 (KL·셀랑고르)","name":"Deepavali replacement holiday"})
     if TODAY <= datetime(2026,10,26).date() <= HORIZON:
         out.append({"date":"2026-10-26","localName":"셀랑고르 주 공휴일 대체휴일 (술탄 즉위 25주년 기념)","name":"Selangor state public holiday (replacement day)"})
     return sorted(out, key=lambda x: x.get("date",""))
